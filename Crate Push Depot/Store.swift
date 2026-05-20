@@ -130,7 +130,7 @@ final class CPDStore: ObservableObject {
         var p = progress[index]
         let earned = CPDStore.starCount(moves: moves, par: par)
         p.solved = true
-        if !p.solved || p.bestMoves == 0 || moves < p.bestMoves {
+        if p.bestMoves == 0 || moves < p.bestMoves {
             p.bestMoves = moves
         }
         if earned > p.stars { p.stars = earned }
