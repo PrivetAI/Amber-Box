@@ -1,0 +1,373 @@
+import SwiftUI
+
+// All icons / art are custom SwiftUI Shapes — no SF Symbols, no emoji, no system images.
+
+// MARK: - Worker
+
+struct CPDWorkerShape: View {
+    var color: Color = CPDPalette.worker
+    var dark: Color = CPDPalette.workerDark
+    var visor: Color = CPDPalette.workerVisor
+    var body: some View {
+        GeometryReader { geo in
+            let s = min(geo.size.width, geo.size.height)
+            ZStack {
+                // body / torso
+                RoundedRectangle(cornerRadius: s * 0.18, style: .continuous)
+                    .fill(color)
+                    .frame(width: s * 0.62, height: s * 0.50)
+                    .offset(y: s * 0.16)
+                // shoulders shading
+                RoundedRectangle(cornerRadius: s * 0.16, style: .continuous)
+                    .fill(dark)
+                    .frame(width: s * 0.62, height: s * 0.14)
+                    .offset(y: s * 0.34)
+                // helmet (hard hat)
+                Path { p in
+                    let w = s * 0.56
+                    let cx = s * 0.5
+                    let topY = s * 0.10
+                    p.addArc(center: CGPoint(x: cx, y: topY + w * 0.34),
+                             radius: w * 0.34,
+                             startAngle: .degrees(180), endAngle: .degrees(360), clockwise: false)
+                    p.addLine(to: CGPoint(x: cx + w * 0.40, y: topY + w * 0.40))
+                    p.addLine(to: CGPoint(x: cx - w * 0.40, y: topY + w * 0.40))
+                    p.closeSubpath()
+                }
+                .fill(CPDPalette.accent)
+                // face plate
+                Capsule()
+                    .fill(visor)
+                    .frame(width: s * 0.30, height: s * 0.12)
+                    .offset(y: -s * 0.04)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+}
+
+// MARK: - Crate (box with cross-bracing)
+
+struct CPDCrateShape: View {
+    var seated: Bool = false
+    var body: some View {
+        GeometryReader { geo in
+            let s = min(geo.size.width, geo.size.height)
+            let inset = s * 0.10
+            let r = s * 0.10
+            let base = seated ? CPDPalette.crateOnPad : CPDPalette.crate
+            let edge = seated ? CPDPalette.pad : CPDPalette.crateDark
+            let light = seated ? CPDPalette.padGlow : CPDPalette.crateLight
+            ZStack {
+                RoundedRectangle(cornerRadius: r, style: .continuous)
+                    .fill(base)
+                    .frame(width: s - inset * 2, height: s - inset * 2)
+                // outer frame
+                RoundedRectangle(cornerRadius: r, style: .continuous)
+                    .stroke(edge, lineWidth: s * 0.06)
+                    .frame(width: s - inset * 2, height: s - inset * 2)
+                // cross bracing
+                Path { p in
+                    let a = inset + s * 0.04
+                    let b = s - inset - s * 0.04
+                    p.move(to: CGPoint(x: a, y: a))
+                    p.addLine(to: CGPoint(x: b, y: b))
+                    p.move(to: CGPoint(x: b, y: a))
+                    p.addLine(to: CGPoint(x: a, y: b))
+                }
+                .stroke(edge, style: StrokeStyle(lineWidth: s * 0.05, lineCap: .round))
+                // top highlight plank
+                RoundedRectangle(cornerRadius: s * 0.03)
+                    .fill(light)
+                    .frame(width: s - inset * 2 - s * 0.18, height: s * 0.06)
+                    .offset(y: -(s * 0.5 - inset - s * 0.13))
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+}
+
+// MARK: - Target pad (ring)
+
+struct CPDPadShape: View {
+    var body: some View {
+        GeometryReader { geo in
+            let s = min(geo.size.width, geo.size.height)
+            ZStack {
+                Circle()
+                    .fill(CPDPalette.pad.opacity(0.16))
+                    .frame(width: s * 0.66, height: s * 0.66)
+                Circle()
+                    .stroke(CPDPalette.pad, lineWidth: s * 0.07)
+                    .frame(width: s * 0.62, height: s * 0.62)
+                Circle()
+                    .stroke(CPDPalette.padGlow.opacity(0.7), lineWidth: s * 0.03)
+                    .frame(width: s * 0.36, height: s * 0.36)
+                Circle()
+                    .fill(CPDPalette.padGlow)
+                    .frame(width: s * 0.12, height: s * 0.12)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+    }
+}
+
+// MARK: - Wall block
+
+struct CPDWallShape: View {
+    var body: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            ZStack {
+                Rectangle().fill(CPDPalette.wall)
+                // brick courses
+                Path { p in
+                    let rows = 3
+                    for i in 1..<rows {
+                        let y = h * CGFloat(i) / CGFloat(rows)
+                        p.move(to: CGPoint(x: 0, y: y))
+                        p.addLine(to: CGPoint(x: w, y: y))
+                    }
+                    // staggered verticals
+                    for i in 0..<rows {
+                        let y0 = h * CGFloat(i) / CGFloat(rows)
+                        let y1 = h * CGFloat(i + 1) / CGFloat(rows)
+                        let offset: CGFloat = (i % 2 == 0) ? w * 0.5 : w * 0.25
+                        p.move(to: CGPoint(x: offset, y: y0))
+                        p.addLine(to: CGPoint(x: offset, y: y1))
+                        let offset2: CGFloat = (i % 2 == 0) ? w * 0.5 : w * 0.75
+                        if offset2 != offset {
+                            p.move(to: CGPoint(x: offset2, y: y0))
+                            p.addLine(to: CGPoint(x: offset2, y: y1))
+                        }
+                    }
+                }
+                .stroke(CPDPalette.wallEdge, lineWidth: max(1, w * 0.04))
+                Rectangle()
+                    .stroke(CPDPalette.wallEdge, lineWidth: max(1, w * 0.05))
+            }
+        }
+    }
+}
+
+// MARK: - D-pad arrow
+
+struct CPDArrowShape: Shape {
+    // points up by default; rotate via view.
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width, h = rect.height
+        p.move(to: CGPoint(x: w * 0.5, y: h * 0.18))
+        p.addLine(to: CGPoint(x: w * 0.82, y: h * 0.52))
+        p.addLine(to: CGPoint(x: w * 0.62, y: h * 0.52))
+        p.addLine(to: CGPoint(x: w * 0.62, y: h * 0.82))
+        p.addLine(to: CGPoint(x: w * 0.38, y: h * 0.82))
+        p.addLine(to: CGPoint(x: w * 0.38, y: h * 0.52))
+        p.addLine(to: CGPoint(x: w * 0.18, y: h * 0.52))
+        p.closeSubpath()
+        return p
+    }
+}
+
+// MARK: - Star
+
+struct CPDStarShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let c = CGPoint(x: rect.midX, y: rect.midY)
+        let outer = min(rect.width, rect.height) / 2
+        let inner = outer * 0.42
+        let points = 5
+        for i in 0..<(points * 2) {
+            let r = (i % 2 == 0) ? outer : inner
+            let angle = -Double.pi / 2 + Double(i) * Double.pi / Double(points)
+            let pt = CGPoint(x: c.x + CGFloat(cos(angle)) * r, y: c.y + CGFloat(sin(angle)) * r)
+            if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        return p
+    }
+}
+
+struct CPDStar: View {
+    var filled: Bool
+    var size: CGFloat
+    var body: some View {
+        CPDStarShape()
+            .fill(filled ? CPDPalette.star : CPDPalette.starEmpty)
+            .overlay(
+                CPDStarShape().stroke(filled ? CPDPalette.star.opacity(0.6) : CPDPalette.starEmpty.opacity(0.6), lineWidth: 1)
+            )
+            .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Gear
+
+struct CPDGearShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let c = CGPoint(x: rect.midX, y: rect.midY)
+        let outer = min(rect.width, rect.height) / 2
+        let inner = outer * 0.72
+        let teeth = 8
+        let total = teeth * 2
+        for i in 0..<total {
+            let r = (i % 2 == 0) ? outer : inner
+            let angle = Double(i) * 2 * Double.pi / Double(total)
+            let pt = CGPoint(x: c.x + CGFloat(cos(angle)) * r, y: c.y + CGFloat(sin(angle)) * r)
+            if i == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        let holeR = outer * 0.34
+        p.addEllipse(in: CGRect(x: c.x - holeR, y: c.y - holeR, width: holeR * 2, height: holeR * 2))
+        return p
+    }
+}
+
+struct CPDGearIcon: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        CPDGearShape()
+            .fill(style: FillStyle(eoFill: true))
+            .foregroundColor(color)
+            .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Lock
+
+struct CPDLockIcon: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        ZStack {
+            // shackle
+            Path { p in
+                let w = size, h = size
+                p.addArc(center: CGPoint(x: w * 0.5, y: h * 0.42),
+                         radius: w * 0.20,
+                         startAngle: .degrees(180), endAngle: .degrees(360), clockwise: false)
+            }
+            .stroke(color, lineWidth: size * 0.12)
+            // body
+            RoundedRectangle(cornerRadius: size * 0.12)
+                .fill(color)
+                .frame(width: size * 0.62, height: size * 0.46)
+                .offset(y: size * 0.18)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Chevron
+
+struct CPDChevronShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width, h = rect.height
+        p.move(to: CGPoint(x: w * 0.3, y: h * 0.15))
+        p.addLine(to: CGPoint(x: w * 0.7, y: h * 0.5))
+        p.addLine(to: CGPoint(x: w * 0.3, y: h * 0.85))
+        return p
+    }
+}
+
+struct CPDChevron: View {
+    var color: Color
+    var size: CGFloat
+    var lineWidth: CGFloat = 2.4
+    var body: some View {
+        CPDChevronShape()
+            .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
+            .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Undo arrow
+
+struct CPDUndoIcon: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        ZStack {
+            Path { p in
+                let s = size
+                p.addArc(center: CGPoint(x: s * 0.52, y: s * 0.52),
+                         radius: s * 0.30,
+                         startAngle: .degrees(150), endAngle: .degrees(20), clockwise: false)
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: size * 0.11, lineCap: .round))
+            // arrowhead at start (upper-left)
+            Path { p in
+                let s = size
+                let tip = CGPoint(x: s * 0.22, y: s * 0.36)
+                p.move(to: tip)
+                p.addLine(to: CGPoint(x: tip.x + s * 0.02, y: tip.y - s * 0.20))
+                p.move(to: tip)
+                p.addLine(to: CGPoint(x: tip.x + s * 0.20, y: tip.y - s * 0.04))
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: size * 0.11, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Restart arrow (circular)
+
+struct CPDRestartIcon: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        ZStack {
+            Path { p in
+                let s = size
+                p.addArc(center: CGPoint(x: s * 0.5, y: s * 0.5),
+                         radius: s * 0.30,
+                         startAngle: .degrees(-50), endAngle: .degrees(210), clockwise: false)
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: size * 0.11, lineCap: .round))
+            // arrowhead at end (upper-right)
+            Path { p in
+                let s = size
+                let tip = CGPoint(x: s * 0.69, y: s * 0.24)
+                p.move(to: tip)
+                p.addLine(to: CGPoint(x: tip.x - s * 0.18, y: tip.y + s * 0.02))
+                p.move(to: tip)
+                p.addLine(to: CGPoint(x: tip.x + s * 0.02, y: tip.y + s * 0.20))
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: size * 0.11, lineCap: .round, lineJoin: .round))
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Checkmark
+
+struct CPDCheckShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width, h = rect.height
+        p.move(to: CGPoint(x: w * 0.2, y: h * 0.55))
+        p.addLine(to: CGPoint(x: w * 0.42, y: h * 0.76))
+        p.addLine(to: CGPoint(x: w * 0.82, y: h * 0.28))
+        return p
+    }
+}
+
+// MARK: - Small worker glyph for menu / header (logo-free abstract mark)
+
+struct CPDDepotMark: View {
+    var size: CGFloat
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+                .fill(CPDPalette.panelRaised)
+            CPDCrateShape()
+                .frame(width: size * 0.7, height: size * 0.7)
+        }
+        .frame(width: size, height: size)
+    }
+}
