@@ -484,6 +484,48 @@ struct ABStreakFlame: View {
     }
 }
 
+// MARK: - Achievement medal (unlocked state)
+
+/// A circular medal with a ribbon notch and an embossed star, used for unlocked achievements.
+/// Locked achievements use `ABLockIcon` instead. Pure Shapes — no SF Symbols / emoji.
+struct ABMedalShape: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        let s = size
+        ZStack {
+            // ribbon tails behind the disc
+            Path { p in
+                p.move(to: CGPoint(x: s * 0.30, y: s * 0.56))
+                p.addLine(to: CGPoint(x: s * 0.18, y: s * 0.98))
+                p.addLine(to: CGPoint(x: s * 0.40, y: s * 0.82))
+                p.closeSubpath()
+                p.move(to: CGPoint(x: s * 0.70, y: s * 0.56))
+                p.addLine(to: CGPoint(x: s * 0.82, y: s * 0.98))
+                p.addLine(to: CGPoint(x: s * 0.60, y: s * 0.82))
+                p.closeSubpath()
+            }
+            .fill(color.opacity(0.55))
+            // outer disc
+            Circle()
+                .fill(color)
+                .frame(width: s * 0.72, height: s * 0.72)
+                .offset(y: -s * 0.06)
+            // inner ring
+            Circle()
+                .stroke(Color.black.opacity(0.18), lineWidth: max(1, s * 0.05))
+                .frame(width: s * 0.58, height: s * 0.58)
+                .offset(y: -s * 0.06)
+            // embossed star
+            ABStarShape()
+                .fill(Color.white.opacity(0.92))
+                .frame(width: s * 0.36, height: s * 0.36)
+                .offset(y: -s * 0.06)
+        }
+        .frame(width: s, height: s)
+    }
+}
+
 // MARK: - Small worker glyph for menu / header (logo-free abstract mark)
 
 struct ABDepotMark: View {

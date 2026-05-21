@@ -5,6 +5,7 @@ import SwiftUI
 struct RootTabView: View {
     @EnvironmentObject var store: ABStore
     @State private var selectedTab = 0
+    @State private var toastTitle: String?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -28,6 +29,59 @@ struct RootTabView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 tabBar
             }
+
+            if let title = toastTitle {
+                unlockToast(title)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .zIndex(30)
+            }
+        }
+        // Surface newly-unlocked achievements as a top banner (~2s), then clear the queue.
+        .onChange(of: store.lastUnlocked) { ids in
+            guard let first = ids.first,
+                  let ach = ABAchievements.all.first(where: { $0.id == first }) else { return }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                toastTitle = ach.title
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    toastTitle = nil
+                }
+                store.lastUnlocked = []
+            }
+        }
+    }
+
+    private func unlockToast(_ title: String) -> some View {
+        VStack {
+            HStack(spacing: 10) {
+                ABMedalShape(color: ABPalette.accent, size: 32)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Achievement Unlocked")
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .tracking(0.8)
+                        .foregroundColor(ABPalette.textMuted)
+                    Text(title)
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .foregroundColor(ABPalette.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(ABPalette.panel)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(ABPalette.accent.opacity(0.35), lineWidth: 1.5)
+                    )
+            )
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            Spacer()
         }
     }
 
