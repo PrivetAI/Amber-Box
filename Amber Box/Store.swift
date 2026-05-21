@@ -336,19 +336,6 @@ final class ABStore: ObservableObject {
 
     // MARK: mutation
 
-    func recordResult(index: Int, moves: Int, par: Int) {
-        guard index >= 0 && index < progress.count else { return }
-        var p = progress[index]
-        let earned = ABStore.starCount(moves: moves, par: par)
-        p.solved = true
-        if p.bestMoves == 0 || moves < p.bestMoves {
-            p.bestMoves = moves
-        }
-        if earned > p.stars { p.stars = earned }
-        progress[index] = p
-        saveProgress()
-    }
-
     static func starCount(moves: Int, par: Int) -> Int {
         let safePar = max(par, 1)
         if moves <= safePar { return 3 }
@@ -426,7 +413,7 @@ final class ABStore: ObservableObject {
         evaluateAchievements()
     }
 
-    /// Mirrors the existing `recordResult` body: solved=true, best (lowest) moves, max stars.
+    /// Apply a solve result: solved=true, best (lowest) moves, max stars.
     private static func applyProgress(_ p: inout ABLevelProgress, moves: Int, stars: Int) {
         p.solved = true
         if p.bestMoves == 0 || moves < p.bestMoves {

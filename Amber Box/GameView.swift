@@ -47,7 +47,10 @@ struct GameView: View {
 
     private var hasNext: Bool {
         if let i = campaignIndex { return i + 1 < ABStore.totalLevels }
-        return nextProvider != nil
+        // Evaluate the provider to see if it actually yields a level (e.g. nil on the last
+        // pack level once the cursor has advanced past the end). This is called only when the
+        // win overlay is visible, so the performance cost is negligible.
+        return nextProvider?() != nil
     }
 
     private var navTitle: String {
@@ -95,8 +98,8 @@ struct GameView: View {
         switch source {
         case .campaign(let i):
             // Route campaign through the unified funnel so lifetime stats + achievements include
-            // campaign play. recordSolve's `.campaign` branch records progress identically to the
-            // old recordResult (solved=true, bestMoves=min, stars=max via the same starCount).
+            // campaign play. recordSolve's `.campaign` branch records progress correctly:
+            // solved=true, bestMoves=min, stars=max via the same starCount.
             store.recordSolve(source: .campaign(index: i), moves: game.moves, par: par,
                               usedUndo: game.usedUndo, pushes: game.pushes)
         default:
