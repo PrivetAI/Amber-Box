@@ -284,6 +284,56 @@ final class ABStore: ObservableObject {
         return stars(forChapter: chapter - 1) >= 30
     }
 
+    // MARK: - Derived achievement metrics (computed from progress, never stored)
+
+    /// Campaign levels solved.
+    var campaignSolvedCount: Int { progress.reduce(0) { $0 + ($1.solved ? 1 : 0) } }
+
+    /// Levels solved across campaign + every pack (used by solve-count achievements).
+    var levelsSolved: Int {
+        var n = campaignSolvedCount
+        for id in ABStore.packIDs { n += packSolvedCount(id) }
+        return n
+    }
+
+    /// Levels earning 3★ across campaign + every pack.
+    var threeStarCount: Int {
+        var n = progress.reduce(0) { $0 + ($1.stars == 3 ? 1 : 0) }
+        for id in ABStore.packIDs {
+            n += packProgress(forPack: id).reduce(0) { $0 + ($1.stars == 3 ? 1 : 0) }
+        }
+        return n
+    }
+
+    /// A campaign chapter is "cleared" when all of its levels are solved.
+    func isChapterCleared(_ chapter: Int) -> Bool {
+        let start = chapter * ABStore.levelsPerChapter
+        let end = start + ABStore.levelsPerChapter
+        guard start >= 0 && end <= progress.count else { return false }
+        return progress[start..<end].allSatisfy { $0.solved }
+    }
+
+    /// A campaign chapter is "3★ed" when every level in it has 3 stars.
+    func isChapterThreeStarred(_ chapter: Int) -> Bool {
+        let start = chapter * ABStore.levelsPerChapter
+        let end = start + ABStore.levelsPerChapter
+        guard start >= 0 && end <= progress.count else { return false }
+        return progress[start..<end].allSatisfy { $0.stars == 3 }
+    }
+
+    var chaptersCleared: Int {
+        (0..<ABStore.chapters).reduce(0) { $0 + (isChapterCleared($1) ? 1 : 0) }
+    }
+
+    var chaptersThreeStarred: Int {
+        (0..<ABStore.chapters).reduce(0) { $0 + (isChapterThreeStarred($1) ? 1 : 0) }
+    }
+
+    /// Count of difficulty packs fully cleared (all 20 solved).
+    var packsCleared: Int {
+        ABStore.packIDs.reduce(0) { $0 + (isPackCleared($1) ? 1 : 0) }
+    }
+
     // MARK: mutation
 
     func recordResult(index: Int, moves: Int, par: Int) {
@@ -443,8 +493,21 @@ final class ABStore: ObservableObject {
         saveStats()
     }
 
+    /// Unlock any not-yet-unlocked achievement whose progress has reached its goal. Newly-unlocked
+    /// ids are appended to `lastUnlocked` for the toast to consume. Called at the end of every
+    /// `recordSolve`.
     func evaluateAchievements() {
-        // Phase 3.2: achievement evaluation + lastUnlocked surfacing (cpd.achievements.v1).
+        var newlyUnlocked: [String] = []
+        for ach in ABAchievements.all where !unlocked.contains(ach.id) {
+            if ach.progress(self) >= ach.goal {
+                unlocked.insert(ach.id)
+                newlyUnlocked.append(ach.id)
+            }
+        }
+        if !newlyUnlocked.isEmpty {
+            lastUnlocked.append(contentsOf: newlyUnlocked)
+            saveAchievements()
+        }
     }
 }
 
