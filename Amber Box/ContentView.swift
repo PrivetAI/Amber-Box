@@ -18,10 +18,7 @@ struct ContentView: View {
 
     var body: some View {
         ZStack {
-            NavigationView {
-                ChapterMapView()
-            }
-            .navigationViewStyle(StackNavigationViewStyle())
+            RootTabView()
 
             if showOnboarding {
                 OnboardingView(isPresented: $showOnboarding)

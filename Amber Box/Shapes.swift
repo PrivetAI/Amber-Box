@@ -357,6 +357,75 @@ struct ABCheckShape: Shape {
     }
 }
 
+// MARK: - Tab bar icons (custom Shapes — no SF Symbols, no emoji)
+
+/// Play tab — a single-color crate glyph (box outline + cross bracing) that tints cleanly.
+struct ABTabPlayIcon: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        let s = size
+        let inset = s * 0.12
+        let r = s * 0.14
+        let lw = max(1.6, s * 0.09)
+        ZStack {
+            RoundedRectangle(cornerRadius: r, style: .continuous)
+                .stroke(color, lineWidth: lw)
+                .frame(width: s - inset * 2, height: s - inset * 2)
+            Path { p in
+                let a = inset + s * 0.04
+                let b = s - inset - s * 0.04
+                p.move(to: CGPoint(x: a, y: a)); p.addLine(to: CGPoint(x: b, y: b))
+                p.move(to: CGPoint(x: b, y: a)); p.addLine(to: CGPoint(x: a, y: b))
+            }
+            .stroke(color, style: StrokeStyle(lineWidth: lw * 0.85, lineCap: .round))
+        }
+        .frame(width: s, height: s)
+    }
+}
+
+/// Challenges tab — a target-pad grid (2x2 mini pads) framed in `color`.
+struct ABTabChallengeIcon: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.18, style: .continuous)
+                .stroke(color, lineWidth: max(1.5, size * 0.09))
+                .frame(width: size * 0.9, height: size * 0.9)
+            let dot = size * 0.18
+            let off = size * 0.2
+            ForEach(0..<4, id: \.self) { i in
+                Circle()
+                    .fill(color)
+                    .frame(width: dot, height: dot)
+                    .offset(x: (i % 2 == 0 ? -off : off), y: (i < 2 ? -off : off))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+/// Awards tab — a star badge.
+struct ABTabAwardsIcon: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        ABStarShape()
+            .fill(color)
+            .frame(width: size, height: size)
+    }
+}
+
+/// More tab — a gear.
+struct ABTabMoreIcon: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        ABGearIcon(color: color, size: size)
+    }
+}
+
 // MARK: - Small worker glyph for menu / header (logo-free abstract mark)
 
 struct ABDepotMark: View {
