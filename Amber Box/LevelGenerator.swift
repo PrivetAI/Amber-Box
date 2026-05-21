@@ -22,6 +22,16 @@ struct ABSplitMix64 {
     }
 
     mutating func bool() -> Bool { next() & 1 == 0 }
+
+    /// One-shot SplitMix64 finalizer — applies the same mixing the generator's `next()` uses
+    /// to turn an arbitrary integer into a well-distributed seed. Used to derive deterministic
+    /// per-source seeds (packs / daily / endless) without ever touching `Hasher`/`hashValue`.
+    static func mix(_ x: UInt64) -> UInt64 {
+        var z = x &+ 0x9E3779B97F4A7C15
+        z = (z ^ (z >> 30)) &* 0xBF58476D1CE4E5B9
+        z = (z ^ (z >> 27)) &* 0x94D049BB133111EB
+        return z ^ (z >> 31)
+    }
 }
 
 // MARK: - Tile model

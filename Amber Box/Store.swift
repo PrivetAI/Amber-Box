@@ -44,6 +44,40 @@ struct ABSettings: Codable {
     enum CodingKeys: String, CodingKey { case soundOn, hapticsOn }
 }
 
+// MARK: - Daily puzzle state (cpd.daily.v1)
+
+struct ABDailyState: Codable {
+    var lastSolvedDateKey: Int = 0   // yyyymmdd; 0 == never solved
+    var currentStreak: Int = 0
+    var bestStreak: Int = 0
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        lastSolvedDateKey = try c.decodeIfPresent(Int.self, forKey: .lastSolvedDateKey) ?? 0
+        currentStreak = try c.decodeIfPresent(Int.self, forKey: .currentStreak) ?? 0
+        bestStreak = try c.decodeIfPresent(Int.self, forKey: .bestStreak) ?? 0
+    }
+
+    enum CodingKeys: String, CodingKey { case lastSolvedDateKey, currentStreak, bestStreak }
+}
+
+// MARK: - Endless run state (cpd.endless.v1)
+
+struct ABEndlessState: Codable {
+    var bestStreak: Int = 0
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bestStreak = try c.decodeIfPresent(Int.self, forKey: .bestStreak) ?? 0
+    }
+
+    enum CodingKeys: String, CodingKey { case bestStreak }
+}
+
 // MARK: - Store (Codable + UserDefaults under cpd.*)
 
 final class ABStore: ObservableObject {
@@ -51,13 +85,25 @@ final class ABStore: ObservableObject {
     static let chapters = 6
     static let levelsPerChapter = 20
 
+    // Difficulty packs (Phase 2). 4 packs × 20 levels each (+80 levels).
+    static let packIDs = ["relaxed", "standard", "tough", "brutal"]
+    static let packLevelCount = 20
+
     @Published private(set) var progress: [ABLevelProgress]
     @Published var settings: ABSettings
     @Published var onboardingDone: Bool
 
+    // Pack progress keyed by pack id; each id maps to `packLevelCount` ABLevelProgress.
+    @Published private(set) var packProgress: [String: [ABLevelProgress]]
+    @Published private(set) var daily: ABDailyState
+    @Published private(set) var endless: ABEndlessState
+
     private let progressKey = "cpd.progress.v1"
     private let settingsKey = "cpd.settings.v1"
     private let onboardingKey = "cpd.onboarding.v1"
+    private let packsKey = "cpd.packs.v1"
+    private let dailyKey = "cpd.daily.v1"
+    private let endlessKey = "cpd.endless.v1"
 
     init() {
         let d = UserDefaults.standard
@@ -80,6 +126,43 @@ final class ABStore: ObservableObject {
         }
 
         onboardingDone = d.bool(forKey: onboardingKey)
+
+        // pack progress — default each id to a fresh array, then overlay any decoded entries
+        // (only when the count matches, mirroring the campaign-progress count guard).
+        var packs = ABStore.freshPackProgress()
+        if let data = d.data(forKey: packsKey),
+           let decoded = try? JSONDecoder().decode([String: [ABLevelProgress]].self, from: data) {
+            for id in ABStore.packIDs {
+                if let arr = decoded[id], arr.count == ABStore.packLevelCount {
+                    packs[id] = arr
+                }
+            }
+        }
+        packProgress = packs
+
+        // daily
+        if let data = d.data(forKey: dailyKey),
+           let decoded = try? JSONDecoder().decode(ABDailyState.self, from: data) {
+            daily = decoded
+        } else {
+            daily = ABDailyState()
+        }
+
+        // endless
+        if let data = d.data(forKey: endlessKey),
+           let decoded = try? JSONDecoder().decode(ABEndlessState.self, from: data) {
+            endless = decoded
+        } else {
+            endless = ABEndlessState()
+        }
+    }
+
+    private static func freshPackProgress() -> [String: [ABLevelProgress]] {
+        var result: [String: [ABLevelProgress]] = [:]
+        for id in packIDs {
+            result[id] = Array(repeating: ABLevelProgress(), count: packLevelCount)
+        }
+        return result
     }
 
     // MARK: persistence
@@ -99,6 +182,24 @@ final class ABStore: ObservableObject {
     func markOnboardingDone() {
         onboardingDone = true
         UserDefaults.standard.set(true, forKey: onboardingKey)
+    }
+
+    private func savePacks() {
+        if let data = try? JSONEncoder().encode(packProgress) {
+            UserDefaults.standard.set(data, forKey: packsKey)
+        }
+    }
+
+    private func saveDaily() {
+        if let data = try? JSONEncoder().encode(daily) {
+            UserDefaults.standard.set(data, forKey: dailyKey)
+        }
+    }
+
+    private func saveEndless() {
+        if let data = try? JSONEncoder().encode(endless) {
+            UserDefaults.standard.set(data, forKey: endlessKey)
+        }
     }
 
     // MARK: queries
@@ -147,7 +248,131 @@ final class ABStore: ObservableObject {
 
     func resetProgress() {
         progress = Array(repeating: ABLevelProgress(), count: ABStore.totalLevels)
+        packProgress = ABStore.freshPackProgress()
+        daily = ABDailyState()
+        endless = ABEndlessState()
         saveProgress()
+        savePacks()
+        saveDaily()
+        saveEndless()
+    }
+
+    // MARK: - Pack queries
+
+    func packProgress(forPack id: String) -> [ABLevelProgress] {
+        packProgress[id] ?? Array(repeating: ABLevelProgress(), count: ABStore.packLevelCount)
+    }
+
+    func packProgress(forPack id: String, index: Int) -> ABLevelProgress {
+        let arr = packProgress(forPack: id)
+        guard index >= 0 && index < arr.count else { return ABLevelProgress() }
+        return arr[index]
+    }
+
+    func packSolvedCount(_ id: String) -> Int {
+        packProgress(forPack: id).reduce(0) { $0 + ($1.solved ? 1 : 0) }
+    }
+
+    func packStars(_ id: String) -> Int {
+        packProgress(forPack: id).reduce(0) { $0 + $1.stars }
+    }
+
+    func isPackCleared(_ id: String) -> Bool {
+        packSolvedCount(id) >= ABStore.packLevelCount
+    }
+
+    // MARK: - Unified solve funnel
+
+    /// Every solve (campaign, pack, daily, endless) funnels through here so progress, stats,
+    /// and achievements all update in one place. Star scoring uses the supplied reference `par`.
+    func recordSolve(source: ABGameSource, moves: Int, par: Int, usedUndo: Bool, pushes: Int) {
+        let earned = ABStore.starCount(moves: moves, par: par)
+        switch source {
+        case .campaign(let i):
+            guard i >= 0 && i < progress.count else { break }
+            ABStore.applyProgress(&progress[i], moves: moves, stars: earned)
+            saveProgress()
+        case .pack(let id, let i):
+            if var arr = packProgress[id], i >= 0 && i < arr.count {
+                ABStore.applyProgress(&arr[i], moves: moves, stars: earned)
+                packProgress[id] = arr
+                savePacks()
+            }
+        case .daily(let dateKey):
+            updateDailyStreak(solvedDateKey: dateKey)
+        case .endless(let streak):
+            let reached = streak + 1   // solving position `streak` clears `streak+1` levels
+            if reached > endless.bestStreak {
+                endless.bestStreak = reached
+                saveEndless()
+            }
+        }
+        bumpStats(earned: earned, moves: moves, pushes: pushes, usedUndo: usedUndo, par: par)
+        evaluateAchievements()
+    }
+
+    /// Mirrors the existing `recordResult` body: solved=true, best (lowest) moves, max stars.
+    private static func applyProgress(_ p: inout ABLevelProgress, moves: Int, stars: Int) {
+        p.solved = true
+        if p.bestMoves == 0 || moves < p.bestMoves {
+            p.bestMoves = moves
+        }
+        if stars > p.stars { p.stars = stars }
+    }
+
+    /// Increment the daily streak when `dateKey` is the day after `lastSolvedDateKey`; reset to
+    /// 1 if it's a brand-new (non-consecutive) day. Solving the same day again is a no-op for the
+    /// streak (replay is allowed but earns no extra streak). Always tracks `bestStreak`.
+    private func updateDailyStreak(solvedDateKey dateKey: Int) {
+        if dateKey == daily.lastSolvedDateKey {
+            return   // already solved today — no extra streak
+        }
+        if daily.lastSolvedDateKey != 0,
+           ABStore.dateKey(dayAfter: daily.lastSolvedDateKey) == dateKey {
+            daily.currentStreak += 1
+        } else {
+            daily.currentStreak = 1
+        }
+        daily.lastSolvedDateKey = dateKey
+        if daily.currentStreak > daily.bestStreak {
+            daily.bestStreak = daily.currentStreak
+        }
+        saveDaily()
+    }
+
+    var isDailySolvedToday: Bool { daily.lastSolvedDateKey == ABStore.dateKey() }
+
+    // MARK: - Date helpers
+
+    /// Calendar day key: year*10000 + month*100 + day, using `Calendar.current`.
+    static func dateKey(_ date: Date = Date()) -> Int {
+        let c = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        let y = c.year ?? 0, m = c.month ?? 0, d = c.day ?? 0
+        return y * 10000 + m * 100 + d
+    }
+
+    /// The dateKey of the calendar day following the given dateKey (handles month/year rollover
+    /// via `Calendar.current`). Returns the input unchanged if it can't be parsed.
+    static func dateKey(dayAfter key: Int) -> Int {
+        let y = key / 10000
+        let m = (key / 100) % 100
+        let d = key % 100
+        var comps = DateComponents()
+        comps.year = y; comps.month = m; comps.day = d
+        let cal = Calendar.current
+        guard let date = cal.date(from: comps),
+              let next = cal.date(byAdding: .day, value: 1, to: date) else { return key }
+        return dateKey(next)
+    }
+
+    // MARK: - Stats / achievements hooks (Phase 3 fills these in)
+
+    func bumpStats(earned: Int, moves: Int, pushes: Int, usedUndo: Bool, par: Int) {
+        // Phase 3: lifetime stats accumulation (cpd.stats.v1).
+    }
+
+    func evaluateAchievements() {
+        // Phase 3: achievement evaluation + lastUnlocked surfacing (cpd.achievements.v1).
     }
 }
 
