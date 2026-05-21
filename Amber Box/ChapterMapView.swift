@@ -1,9 +1,13 @@
 import SwiftUI
 
+private enum ABChapterSheet: Int, Identifiable {
+    case settings, howTo
+    var id: Int { rawValue }
+}
+
 struct ChapterMapView: View {
     @EnvironmentObject var store: ABStore
-    @State private var showSettings = false
-    @State private var showHowTo = false
+    @State private var activeSheet: ABChapterSheet? = nil
 
     private let chapterNames = [
         "Loading Bay", "Cold Storage", "Pallet Yard",
@@ -29,11 +33,26 @@ struct ChapterMapView: View {
         }
         .navigationBarTitle("", displayMode: .inline)
         .navigationBarHidden(true)
-        .background(
-            NavigationLink(destination: SettingsView(), isActive: $showSettings) { EmptyView() }.hidden()
-        )
-        .sheet(isPresented: $showHowTo) {
-            HowToPlayView()
+        .sheet(item: $activeSheet) { sheet in
+            switch sheet {
+            case .settings:
+                NavigationView {
+                    SettingsView()
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button(action: { activeSheet = nil }) {
+                                    Text("Done")
+                                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                                        .foregroundColor(ABPalette.accent)
+                                }
+                            }
+                        }
+                }
+                .navigationViewStyle(StackNavigationViewStyle())
+                .environmentObject(store)
+            case .howTo:
+                HowToPlayView()
+            }
         }
     }
 
@@ -53,7 +72,7 @@ struct ChapterMapView: View {
             }
             Spacer()
             Button {
-                showHowTo = true
+                activeSheet = .howTo
             } label: {
                 ZStack {
                     Circle().fill(ABPalette.panel).frame(width: 40, height: 40)
@@ -63,7 +82,7 @@ struct ChapterMapView: View {
                 }
             }
             Button {
-                showSettings = true
+                activeSheet = .settings
             } label: {
                 ZStack {
                     Circle().fill(ABPalette.panel).frame(width: 40, height: 40)
