@@ -426,6 +426,64 @@ struct ABTabMoreIcon: View {
     }
 }
 
+// MARK: - Pack tier emblem (stacked crates, count = tier 1...4)
+
+/// Difficulty-pack emblem: a stack of `tier` crate bars (1 = easiest, 4 = hardest), tinted by
+/// the pack accent. Pure Shapes, no SF Symbols.
+struct ABPackEmblem: View {
+    var tier: Int       // 1...4
+    var tint: Color
+    var size: CGFloat
+    var body: some View {
+        let n = max(1, min(tier, 4))
+        let gap = size * 0.10
+        let barH = (size - gap * CGFloat(n - 1)) / CGFloat(n)
+        VStack(spacing: gap) {
+            ForEach(0..<n, id: \.self) { _ in
+                RoundedRectangle(cornerRadius: barH * 0.28, style: .continuous)
+                    .fill(tint)
+                    .frame(width: size, height: barH)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: barH * 0.28, style: .continuous)
+                            .stroke(Color.black.opacity(0.18), lineWidth: max(1, size * 0.04))
+                    )
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+// MARK: - Streak flame (Daily / Endless)
+
+/// A simple teardrop flame, used to mark streak counts. Drawn as a Shape (no emoji).
+struct ABFlameShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width, h = rect.height
+        p.move(to: CGPoint(x: w * 0.5, y: 0))
+        p.addQuadCurve(to: CGPoint(x: w, y: h * 0.62),
+                       control: CGPoint(x: w * 1.02, y: h * 0.18))
+        p.addQuadCurve(to: CGPoint(x: w * 0.5, y: h),
+                       control: CGPoint(x: w * 0.94, y: h * 0.96))
+        p.addQuadCurve(to: CGPoint(x: 0, y: h * 0.62),
+                       control: CGPoint(x: w * 0.06, y: h * 0.96))
+        p.addQuadCurve(to: CGPoint(x: w * 0.5, y: 0),
+                       control: CGPoint(x: w * -0.02, y: h * 0.18))
+        p.closeSubpath()
+        return p
+    }
+}
+
+struct ABStreakFlame: View {
+    var color: Color
+    var size: CGFloat
+    var body: some View {
+        ABFlameShape()
+            .fill(color)
+            .frame(width: size * 0.78, height: size)
+    }
+}
+
 // MARK: - Small worker glyph for menu / header (logo-free abstract mark)
 
 struct ABDepotMark: View {
