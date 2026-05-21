@@ -78,6 +78,30 @@ struct ABEndlessState: Codable {
     enum CodingKeys: String, CodingKey { case bestStreak }
 }
 
+// MARK: - Lifetime cumulative stats (cpd.stats.v1)
+
+/// Cumulative counters that cannot be derived from the progress arrays (they accumulate across
+/// every solve and every replay). Star/solve-based numbers are NOT stored here — they are derived
+/// on demand from `progress` / `packProgress` so replays can't inflate them.
+struct ABStats: Codable {
+    var totalMoves: Int = 0       // sum of moves across all solves (campaign + packs + daily + endless)
+    var totalPushes: Int = 0      // sum of crate pushes across all solves
+    var noUndoSolves: Int = 0     // count of solves completed without ever using undo
+    var underParSolves: Int = 0   // count of solves strictly under par
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        totalMoves = try c.decodeIfPresent(Int.self, forKey: .totalMoves) ?? 0
+        totalPushes = try c.decodeIfPresent(Int.self, forKey: .totalPushes) ?? 0
+        noUndoSolves = try c.decodeIfPresent(Int.self, forKey: .noUndoSolves) ?? 0
+        underParSolves = try c.decodeIfPresent(Int.self, forKey: .underParSolves) ?? 0
+    }
+
+    enum CodingKeys: String, CodingKey { case totalMoves, totalPushes, noUndoSolves, underParSolves }
+}
+
 // MARK: - Store (Codable + UserDefaults under cpd.*)
 
 final class ABStore: ObservableObject {
@@ -98,12 +122,20 @@ final class ABStore: ObservableObject {
     @Published private(set) var daily: ABDailyState
     @Published private(set) var endless: ABEndlessState
 
+    // Lifetime cumulative stats + unlocked achievements (Phase 3).
+    @Published private(set) var stats: ABStats
+    @Published private(set) var unlocked: Set<String>
+    // Achievement ids unlocked by the most recent solve; consumed + cleared by the unlock toast.
+    @Published var lastUnlocked: [String] = []
+
     private let progressKey = "cpd.progress.v1"
     private let settingsKey = "cpd.settings.v1"
     private let onboardingKey = "cpd.onboarding.v1"
     private let packsKey = "cpd.packs.v1"
     private let dailyKey = "cpd.daily.v1"
     private let endlessKey = "cpd.endless.v1"
+    private let statsKey = "cpd.stats.v1"
+    private let achievementsKey = "cpd.achievements.v1"
 
     init() {
         let d = UserDefaults.standard
@@ -155,6 +187,22 @@ final class ABStore: ObservableObject {
         } else {
             endless = ABEndlessState()
         }
+
+        // stats
+        if let data = d.data(forKey: statsKey),
+           let decoded = try? JSONDecoder().decode(ABStats.self, from: data) {
+            stats = decoded
+        } else {
+            stats = ABStats()
+        }
+
+        // unlocked achievements
+        if let data = d.data(forKey: achievementsKey),
+           let decoded = try? JSONDecoder().decode(Set<String>.self, from: data) {
+            unlocked = decoded
+        } else {
+            unlocked = []
+        }
     }
 
     private static func freshPackProgress() -> [String: [ABLevelProgress]] {
@@ -199,6 +247,18 @@ final class ABStore: ObservableObject {
     private func saveEndless() {
         if let data = try? JSONEncoder().encode(endless) {
             UserDefaults.standard.set(data, forKey: endlessKey)
+        }
+    }
+
+    private func saveStats() {
+        if let data = try? JSONEncoder().encode(stats) {
+            UserDefaults.standard.set(data, forKey: statsKey)
+        }
+    }
+
+    private func saveAchievements() {
+        if let data = try? JSONEncoder().encode(unlocked) {
+            UserDefaults.standard.set(data, forKey: achievementsKey)
         }
     }
 
@@ -251,10 +311,15 @@ final class ABStore: ObservableObject {
         packProgress = ABStore.freshPackProgress()
         daily = ABDailyState()
         endless = ABEndlessState()
+        stats = ABStats()
+        unlocked = []
+        lastUnlocked = []
         saveProgress()
         savePacks()
         saveDaily()
         saveEndless()
+        saveStats()
+        saveAchievements()
     }
 
     // MARK: - Pack queries
@@ -367,12 +432,19 @@ final class ABStore: ObservableObject {
 
     // MARK: - Stats / achievements hooks (Phase 3 fills these in)
 
+    /// Accumulate cumulative lifetime counters for one solve. Called once per solve from
+    /// `recordSolve`. Star/solve totals are NOT counted here (they derive from progress arrays so
+    /// replays never inflate them); only genuinely cumulative play counters live here.
     func bumpStats(earned: Int, moves: Int, pushes: Int, usedUndo: Bool, par: Int) {
-        // Phase 3: lifetime stats accumulation (cpd.stats.v1).
+        stats.totalMoves += moves
+        stats.totalPushes += pushes
+        if !usedUndo { stats.noUndoSolves += 1 }
+        if moves < par { stats.underParSolves += 1 }
+        saveStats()
     }
 
     func evaluateAchievements() {
-        // Phase 3: achievement evaluation + lastUnlocked surfacing (cpd.achievements.v1).
+        // Phase 3.2: achievement evaluation + lastUnlocked surfacing (cpd.achievements.v1).
     }
 }
 

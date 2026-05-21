@@ -94,7 +94,11 @@ struct GameView: View {
         didRecord = true
         switch source {
         case .campaign(let i):
-            store.recordResult(index: i, moves: game.moves, par: par)
+            // Route campaign through the unified funnel so lifetime stats + achievements include
+            // campaign play. recordSolve's `.campaign` branch records progress identically to the
+            // old recordResult (solved=true, bestMoves=min, stars=max via the same starCount).
+            store.recordSolve(source: .campaign(index: i), moves: game.moves, par: par,
+                              usedUndo: game.usedUndo, pushes: game.pushes)
         default:
             onSolved(game.moves, game.usedUndo, game.pushes)
         }
