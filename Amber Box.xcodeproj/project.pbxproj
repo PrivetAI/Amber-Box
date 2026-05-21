@@ -23,6 +23,7 @@
 		A1000002000000000000014 /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000014 /* Store.swift */; };
 		A1000002000000000000015 /* HowToPlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000015 /* HowToPlayView.swift */; };
 		A1000002000000000000016 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000016 /* Assets.xcassets */; };
+		A1000002000000000000018 /* Difficulty.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1000002000000000000018 /* Difficulty.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -43,6 +44,7 @@
 		B1000002000000000000015 /* HowToPlayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowToPlayView.swift; sourceTree = "<group>"; };
 		B1000002000000000000016 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		B1000002000000000000017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		B1000002000000000000018 /* Difficulty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Difficulty.swift; sourceTree = "<group>"; };
 		C1000002000000000000001 /* Amber Box.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Amber Box.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -71,6 +73,7 @@
 				B1000002000000000000001 /* Amber_BoxApp.swift */,
 				B1000002000000000000002 /* ContentView.swift */,
 				B1000002000000000000003 /* GameModel.swift */,
+				B1000002000000000000018 /* Difficulty.swift */,
 				B1000002000000000000004 /* LevelGenerator.swift */,
 				B1000002000000000000005 /* Theme.swift */,
 				B1000002000000000000006 /* Shapes.swift */,
@@ -169,6 +172,7 @@
 				A1000002000000000000001 /* Amber_BoxApp.swift in Sources */,
 				A1000002000000000000002 /* ContentView.swift in Sources */,
 				A1000002000000000000003 /* GameModel.swift in Sources */,
+				A1000002000000000000018 /* Difficulty.swift in Sources */,
 				A1000002000000000000004 /* LevelGenerator.swift in Sources */,
 				A1000002000000000000005 /* Theme.swift in Sources */,
 				A1000002000000000000006 /* Shapes.swift in Sources */,

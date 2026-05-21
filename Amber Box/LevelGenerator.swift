@@ -103,6 +103,22 @@ enum ABLevelGenerator {
     }
 
     static func spec(for index: Int) -> Spec {
+        let p = profileForCampaign(index: index)
+        return spec(forProfile: p)
+    }
+
+    /// Translate a difficulty profile into the concrete generation Spec the core uses.
+    static func spec(forProfile p: ABDifficultyProfile) -> Spec {
+        let w = min(p.gridSize, 10)
+        let h = min(p.gridSize, 10)
+        return Spec(width: w, height: h, crates: max(1, p.crates), scrambleSteps: p.scrambleDepth)
+    }
+
+    /// Derive the campaign difficulty profile for a 0-based level index. This factors the
+    /// original `spec(for:)` per-index scaling out so campaign output is unchanged: the
+    /// grid/crate/scramble math is identical, and `wallDensity` is chosen so the obstacle
+    /// count reproduces the original `max(0, chapter - 1)` interior-wall count exactly.
+    static func profileForCampaign(index: Int) -> ABDifficultyProfile {
         let chapter = index / 20         // 0..5
         let within = index % 20          // 0..19
         // Grid grows 6x6 -> 10x10 across chapters; crate count rises 1 -> 8.
@@ -112,26 +128,39 @@ enum ABLevelGenerator {
         // crates: chapter base + progression within chapter
         let baseCrates = 1 + chapter      // chapter0:1 ... chapter5:6
         let extra = within / 7            // 0..2 across the chapter
-        let crates = min(baseCrates + extra, 8)
+        let crates = max(1, min(baseCrates + extra, 8))
         // scramble grows with difficulty
         let scramble = 8 + chapter * 6 + within * 2
-        return Spec(width: w, height: h, crates: max(1, crates), scrambleSteps: scramble)
+        // Original obstacle count = max(0, min(chapter - 1, interior/8)). Encode it as a
+        // wall density that floors back to the same integer for this interior size.
+        let interior = (w - 2) * (h - 2)
+        let targetObstacles = max(0, min(chapter - 1, interior / 8))
+        let density = interior > 0 ? (Double(targetObstacles) + 0.5) / Double(interior) : 0
+        return ABDifficultyProfile(gridSize: size, crates: crates, scrambleDepth: scramble, wallDensity: density)
     }
 
     static func generate(index: Int) -> ABLevel {
-        var rng = ABSplitMix64(seed: seedSafe(for: index))
-        let s = spec(for: index)
+        // Use the SAME seed derivation the original code used so cached campaign levels are identical.
+        generate(profile: profileForCampaign(index: index), seed: seedSafe(for: index), levelIndex: index)
+    }
+
+    /// Deterministic from `seed`. Reuses the existing reverse-construction core, parameterized
+    /// by `profile`. `levelIndex` populates `ABLevel.index` (campaign uses the global index;
+    /// non-campaign sources pass any stable value — it does not affect generation draws).
+    static func generate(profile: ABDifficultyProfile, seed: UInt64, levelIndex: Int = 0) -> ABLevel {
+        var rng = ABSplitMix64(seed: seed)
+        let s = spec(forProfile: profile)
         let w = s.width, h = s.height
 
         // Attempt loop: produce a valid puzzle. The reverse construction always
         // yields a solvable layout; we re-roll only to satisfy quality validators.
         for _ in 0..<60 {
-            if let level = attempt(index: index, spec: s, rng: &rng) {
+            if let level = attempt(levelIndex: levelIndex, spec: s, profile: profile, rng: &rng) {
                 return level
             }
         }
         // Fallback: simplest guaranteed-valid layout (rare).
-        return fallback(index: index, w: w, h: h)
+        return fallback(index: levelIndex, w: w, h: h)
     }
 
     private static func seedSafe(for index: Int) -> UInt64 {
@@ -139,7 +168,7 @@ enum ABLevelGenerator {
         return base &+ (UInt64(index) &* 0x9E3779B97F4A7C15) &+ 0xCA7
     }
 
-    private static func attempt(index: Int, spec s: Spec, rng: inout ABSplitMix64) -> ABLevel? {
+    private static func attempt(levelIndex: Int, spec s: Spec, profile: ABDifficultyProfile, rng: inout ABSplitMix64) -> ABLevel? {
         let w = s.width, h = s.height
 
         // Build interior wall ring is the border; interior is floor with some scattered walls.
@@ -163,9 +192,9 @@ enum ABLevelGenerator {
         }
         guard interior.count >= s.crates + 4 else { return nil }
 
-        // Scatter a few interior obstacle walls for higher chapters (kept sparse).
-        let chapter = index / 20
-        let obstacleCount = max(0, min(chapter - 1, (interior.count / 8)))
+        // Scatter a few interior obstacle walls (kept sparse). The count comes from the
+        // profile's wall density, floored, and capped at 1/8 of the interior to avoid sealing.
+        let obstacleCount = max(0, min(Int((Double(interior.count) * profile.wallDensity).rounded(.down)), interior.count / 8))
         var obstacleCandidates = interior
         shuffle(&obstacleCandidates, rng: &rng)
         var placedObstacles = Set<ABPoint>()
@@ -281,7 +310,7 @@ enum ABLevelGenerator {
         let cratesArr = Array(crates).sorted { ($0.y, $0.x) < ($1.y, $1.x) }
 
         return ABLevel(
-            index: index,
+            index: levelIndex,
             width: w,
             height: h,
             tiles: tiles,
