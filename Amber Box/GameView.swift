@@ -4,18 +4,56 @@ struct GameView: View {
     @EnvironmentObject var store: ABStore
     @Environment(\.presentationMode) private var presentationMode
 
-    let levelIndex: Int
+    // Generalized session inputs — every content source (campaign, packs, daily,
+    // endless) reuses one engine.
+    let source: ABGameSource
+    let par: Int
+    let onSolved: (_ moves: Int, _ usedUndo: Bool, _ pushes: Int) -> Void
+    let nextProvider: (() -> (level: ABLevel, par: Int, source: ABGameSource)?)?
+
     @StateObject private var game: ABGameModel
     @State private var showWin = false
     @State private var goNext = false
+    @State private var didRecord = false
 
-    init(levelIndex: Int) {
-        self.levelIndex = levelIndex
-        let level = ABLevelCache.shared.level(levelIndex)
+    /// Designated init. `par` is the reference par used for star scoring; `onSolved` records
+    /// progress for non-campaign sources; `nextProvider` supplies the next session (or nil to
+    /// hide the Next button).
+    init(level: ABLevel, par: Int, source: ABGameSource,
+         onSolved: @escaping (_ moves: Int, _ usedUndo: Bool, _ pushes: Int) -> Void,
+         nextProvider: (() -> (level: ABLevel, par: Int, source: ABGameSource)?)? = nil) {
+        self.source = source
+        self.par = par
+        self.onSolved = onSolved
+        self.nextProvider = nextProvider
         _game = StateObject(wrappedValue: ABGameModel(level: level))
     }
 
-    private var hasNext: Bool { levelIndex + 1 < ABStore.totalLevels }
+    /// Campaign convenience init — preserves today's behavior: records to `cpd.progress.v1`
+    /// and advances to index+1. Recording is wired through `source` in `recordSolveIfNeeded`
+    /// because the store is an `@EnvironmentObject` (unavailable in `init`).
+    init(levelIndex: Int) {
+        let level = ABLevelCache.shared.level(levelIndex)
+        self.init(level: level, par: level.par, source: .campaign(index: levelIndex),
+                  onSolved: { _, _, _ in },
+                  nextProvider: nil)
+    }
+
+    /// 0-based campaign index when this is a campaign session, else nil.
+    private var campaignIndex: Int? {
+        if case .campaign(let i) = source { return i }
+        return nil
+    }
+
+    private var hasNext: Bool {
+        if let i = campaignIndex { return i + 1 < ABStore.totalLevels }
+        return nextProvider != nil
+    }
+
+    private var navTitle: String {
+        if let i = campaignIndex { return "Level \(i + 1)" }
+        return "Puzzle"
+    }
 
     var body: some View {
         ZStack {
@@ -37,9 +75,10 @@ struct GameView: View {
             ) { EmptyView() }
             .hidden()
         }
-        .navigationBarTitle("Level \(levelIndex + 1)", displayMode: .inline)
+        .navigationBarTitle(navTitle, displayMode: .inline)
         .onChange(of: game.solved) { solved in
             if solved {
+                recordSolveIfNeeded()
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8).delay(0.25)) {
                     showWin = true
                 }
@@ -47,10 +86,27 @@ struct GameView: View {
         }
     }
 
+    /// Funnel a solve through the session's source exactly once. Campaign records to the
+    /// store directly (store is an EnvironmentObject, available here in the view); other
+    /// sources record through the `onSolved` hook supplied by their caller.
+    private func recordSolveIfNeeded() {
+        guard !didRecord else { return }
+        didRecord = true
+        switch source {
+        case .campaign(let i):
+            store.recordResult(index: i, moves: game.moves, par: par)
+        default:
+            onSolved(game.moves, game.usedUndo, game.pushes)
+        }
+    }
+
     @ViewBuilder
     private var nextLevelDestination: some View {
-        if hasNext {
-            GameView(levelIndex: levelIndex + 1)
+        if let i = campaignIndex, i + 1 < ABStore.totalLevels {
+            GameView(levelIndex: i + 1)
+        } else if let provider = nextProvider, let nxt = provider() {
+            GameView(level: nxt.level, par: nxt.par, source: nxt.source,
+                     onSolved: onSolved, nextProvider: nextProvider)
         } else {
             EmptyView()
         }

@@ -19,6 +19,7 @@ final class ABGameModel: ObservableObject {
     @Published private(set) var solved: Bool = false
     @Published private(set) var facing: ABDirection = .down
     @Published private(set) var lastPushAnimationTick: Int = 0
+    @Published private(set) var usedUndo: Bool = false   // true if undo was used at any point this attempt
 
     private var undoStack: [ABUndoStep] = []
 
@@ -97,6 +98,7 @@ final class ABGameModel: ObservableObject {
 
     func undo(store: ABStore) {
         guard let step = undoStack.popLast() else { return }
+        usedUndo = true
         // reverse crate push first
         if let cFrom = step.pushedCrateFrom, let cTo = step.pushedCrateTo {
             crates.remove(cTo)
@@ -119,6 +121,7 @@ final class ABGameModel: ObservableObject {
         moves = 0
         pushes = 0
         solved = false
+        usedUndo = false
         facing = .down
         undoStack.removeAll()
         ABFeedback.tap(store)
@@ -130,7 +133,9 @@ final class ABGameModel: ObservableObject {
         guard crateTotal > 0 else { return }
         if crateSeatedCount == crateTotal {
             solved = true
-            store.recordResult(index: level.index, moves: moves, par: level.par)
+            // Progress recording is handled by GameView via the session's source/onSolved
+            // hook (so every content source — campaign, packs, daily, endless — funnels
+            // through one place). The model only flags the solve and fires feedback.
             ABFeedback.success(store)
         }
     }
