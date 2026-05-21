@@ -67,7 +67,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .navigationBarTitle("Settings", displayMode: .inline)
+        .navigationBarTitle("More", displayMode: .inline)
         .sheet(isPresented: $showPrivacy) {
             AmberBoxWebPanel(amberBoxURLString: privacyURL)
                 .edgesIgnoringSafeArea(.all)

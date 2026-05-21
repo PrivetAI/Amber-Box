@@ -1,13 +1,7 @@
 import SwiftUI
 
-private enum ABChapterSheet: Int, Identifiable {
-    case settings, howTo
-    var id: Int { rawValue }
-}
-
 struct ChapterMapView: View {
     @EnvironmentObject var store: ABStore
-    @State private var activeSheet: ABChapterSheet? = nil
 
     private let chapterNames = [
         "Loading Bay", "Cold Storage", "Pallet Yard",
@@ -33,27 +27,6 @@ struct ChapterMapView: View {
         }
         .navigationBarTitle("", displayMode: .inline)
         .navigationBarHidden(true)
-        .sheet(item: $activeSheet) { sheet in
-            switch sheet {
-            case .settings:
-                NavigationView {
-                    SettingsView()
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                Button(action: { activeSheet = nil }) {
-                                    Text("Done")
-                                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                                        .foregroundColor(ABPalette.accent)
-                                }
-                            }
-                        }
-                }
-                .navigationViewStyle(StackNavigationViewStyle())
-                .environmentObject(store)
-            case .howTo:
-                HowToPlayView()
-            }
-        }
     }
 
     private var header: some View {
@@ -71,24 +44,6 @@ struct ChapterMapView: View {
                 }
             }
             Spacer()
-            Button {
-                activeSheet = .howTo
-            } label: {
-                ZStack {
-                    Circle().fill(ABPalette.panel).frame(width: 40, height: 40)
-                    Text("?")
-                        .font(.system(size: 20, weight: .heavy, design: .rounded))
-                        .foregroundColor(ABPalette.textSecondary)
-                }
-            }
-            Button {
-                activeSheet = .settings
-            } label: {
-                ZStack {
-                    Circle().fill(ABPalette.panel).frame(width: 40, height: 40)
-                    ABGearIcon(color: ABPalette.textSecondary, size: 22)
-                }
-            }
         }
         .padding(.vertical, 6)
     }

@@ -1,17 +1,11 @@
 import SwiftUI
 
-/// More tab — hosts the existing Settings content (Audio/Haptics, How to Play, Privacy,
-/// Reset). Fleshed out in Task 1.4; minimal placeholder for the tab shell.
+/// More tab — hosts the existing Settings content (Audio/Haptics, How to Play, Privacy
+/// Policy, About/Version, Reset Progress). The Settings/How-To previously reached from the
+/// chapter map header now live here. `SettingsView` keeps its own How-To/Privacy sheets and
+/// reset alert; MoreView is the NavigationView-hosted root for that content.
 struct MoreView: View {
-    @EnvironmentObject var store: ABStore
-
     var body: some View {
-        ZStack {
-            ABBackground()
-            Text("More")
-                .font(.system(size: 22, weight: .heavy, design: .rounded))
-                .foregroundColor(ABPalette.textPrimary)
-        }
-        .navigationBarHidden(true)
+        SettingsView()
     }
 }
