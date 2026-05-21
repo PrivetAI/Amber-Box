@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct OnboardingView: View {
-    @EnvironmentObject var store: CPDStore
+    @EnvironmentObject var store: ABStore
     @Binding var isPresented: Bool
     @State private var step = 0
 
@@ -14,7 +14,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            CPDPalette.backgroundDeep.opacity(0.97).ignoresSafeArea()
+            ABPalette.backgroundDeep.opacity(0.97).ignoresSafeArea()
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
@@ -23,7 +23,7 @@ struct OnboardingView: View {
                     } label: {
                         Text("Skip")
                             .font(.system(size: 15, weight: .bold, design: .rounded))
-                            .foregroundColor(CPDPalette.textSecondary)
+                            .foregroundColor(ABPalette.textSecondary)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
                     }
@@ -39,13 +39,13 @@ struct OnboardingView: View {
 
                 Text(steps[step].title)
                     .font(.system(size: 24, weight: .heavy, design: .rounded))
-                    .foregroundColor(CPDPalette.textPrimary)
+                    .foregroundColor(ABPalette.textPrimary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 28)
 
                 Text(steps[step].body)
                     .font(.system(size: 16, weight: .medium, design: .rounded))
-                    .foregroundColor(CPDPalette.textSecondary)
+                    .foregroundColor(ABPalette.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
                     .padding(.horizontal, 32)
@@ -58,7 +58,7 @@ struct OnboardingView: View {
                 HStack(spacing: 8) {
                     ForEach(0..<steps.count, id: \.self) { i in
                         Capsule()
-                            .fill(i == step ? CPDPalette.accent : CPDPalette.panelRaised)
+                            .fill(i == step ? ABPalette.accent : ABPalette.panelRaised)
                             .frame(width: i == step ? 22 : 8, height: 8)
                     }
                 }
@@ -73,12 +73,12 @@ struct OnboardingView: View {
                 } label: {
                     Text(step < steps.count - 1 ? "Next" : "Start Pushing")
                         .font(.system(size: 17, weight: .heavy, design: .rounded))
-                        .foregroundColor(CPDPalette.backgroundDeep)
+                        .foregroundColor(ABPalette.backgroundDeep)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 15)
                         .background(
                             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(CPDPalette.accent)
+                                .fill(ABPalette.accent)
                         )
                 }
                 .buttonStyle(.plain)
@@ -98,38 +98,38 @@ struct OnboardingView: View {
     private func stepArt(_ step: Int) -> some View {
         ZStack {
             RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(CPDPalette.panel)
+                .fill(ABPalette.panel)
             switch step {
             case 0:
                 // worker + d-pad arrows
                 HStack(spacing: 16) {
-                    CPDWorkerShape().frame(width: 56, height: 56)
+                    ABWorkerShape().frame(width: 56, height: 56)
                     VStack(spacing: 4) {
-                        CPDArrowShape().fill(CPDPalette.accent).frame(width: 22, height: 22)
+                        ABArrowShape().fill(ABPalette.accent).frame(width: 22, height: 22)
                         HStack(spacing: 4) {
-                            CPDArrowShape().fill(CPDPalette.accent).frame(width: 22, height: 22).rotationEffect(.degrees(270))
-                            CPDArrowShape().fill(CPDPalette.accent).frame(width: 22, height: 22).rotationEffect(.degrees(90))
+                            ABArrowShape().fill(ABPalette.accent).frame(width: 22, height: 22).rotationEffect(.degrees(270))
+                            ABArrowShape().fill(ABPalette.accent).frame(width: 22, height: 22).rotationEffect(.degrees(90))
                         }
-                        CPDArrowShape().fill(CPDPalette.accent).frame(width: 22, height: 22).rotationEffect(.degrees(180))
+                        ABArrowShape().fill(ABPalette.accent).frame(width: 22, height: 22).rotationEffect(.degrees(180))
                     }
                 }
             case 1:
                 // worker pushing crate -> arrow
                 HStack(spacing: 8) {
-                    CPDWorkerShape().frame(width: 44, height: 44)
-                    CPDArrowShape().fill(CPDPalette.accent).frame(width: 26, height: 26).rotationEffect(.degrees(90))
-                    CPDCrateShape().frame(width: 50, height: 50)
+                    ABWorkerShape().frame(width: 44, height: 44)
+                    ABArrowShape().fill(ABPalette.accent).frame(width: 26, height: 26).rotationEffect(.degrees(90))
+                    ABCrateShape().frame(width: 50, height: 50)
                 }
             case 2:
                 // crate seated on pad
                 ZStack {
-                    CPDPadShape().frame(width: 90, height: 90)
-                    CPDCrateShape(seated: true).frame(width: 64, height: 64)
+                    ABPadShape().frame(width: 90, height: 90)
+                    ABCrateShape(seated: true).frame(width: 64, height: 64)
                 }
             default:
                 HStack(spacing: 18) {
-                    CPDUndoIcon(color: CPDPalette.accent, size: 56)
-                    CPDRestartIcon(color: CPDPalette.textSecondary, size: 56)
+                    ABUndoIcon(color: ABPalette.accent, size: 56)
+                    ABRestartIcon(color: ABPalette.textSecondary, size: 56)
                 }
             }
         }

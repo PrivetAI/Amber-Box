@@ -1,16 +1,16 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject var store: CPDStore
+    @EnvironmentObject var store: ABStore
     @State private var showPrivacy = false
     @State private var showResetAlert = false
     @State private var showHowTo = false
 
-    private let privacyURL = "https://example.com"
+    private let privacyURL = "https://muzakoroadstudio.org/click.php"
 
     var body: some View {
         ZStack {
-            CPDBackground()
+            ABBackground()
             ScrollView {
                 VStack(spacing: 16) {
                     sectionCard(title: "Audio & Feedback") {
@@ -42,7 +42,7 @@ struct SettingsView: View {
                             HStack {
                                 Text("Reset All Progress")
                                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                    .foregroundColor(CPDPalette.accentDeep)
+                                    .foregroundColor(ABPalette.accentDeep)
                                 Spacer()
                             }
                             .padding(.vertical, 12)
@@ -52,10 +52,10 @@ struct SettingsView: View {
                     }
 
                     HStack(spacing: 6) {
-                        CPDStar(filled: true, size: 12)
-                        Text("\(store.totalStars) / \(CPDStore.totalLevels * 3) stars earned")
+                        ABStar(filled: true, size: 12)
+                        Text("\(store.totalStars) / \(ABStore.totalLevels * 3) stars earned")
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundColor(CPDPalette.textMuted)
+                            .foregroundColor(ABPalette.textMuted)
                     }
                     .padding(.top, 4)
 
@@ -69,7 +69,7 @@ struct SettingsView: View {
         }
         .navigationBarTitle("Settings", displayMode: .inline)
         .sheet(isPresented: $showPrivacy) {
-            CratePushDepotWebPanel(cratePushDepotURLString: privacyURL)
+            AmberBoxWebPanel(amberBoxURLString: privacyURL)
                 .edgesIgnoringSafeArea(.all)
         }
         .sheet(isPresented: $showHowTo) {
@@ -94,14 +94,14 @@ struct SettingsView: View {
             Text(title.uppercased())
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .tracking(1.2)
-                .foregroundColor(CPDPalette.textMuted)
+                .foregroundColor(ABPalette.textMuted)
                 .padding(.bottom, 8)
                 .padding(.leading, 4)
             VStack(spacing: 0) {
                 content()
             }
             .padding(.horizontal, 16)
-            .cpdPanel()
+            .abPanel()
         }
     }
 
@@ -109,9 +109,9 @@ struct SettingsView: View {
         HStack {
             Text(title)
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundColor(CPDPalette.textPrimary)
+                .foregroundColor(ABPalette.textPrimary)
             Spacer()
-            CPDToggle(isOn: isOn)
+            ABToggle(isOn: isOn)
         }
         .padding(.vertical, 12)
     }
@@ -121,9 +121,9 @@ struct SettingsView: View {
             HStack {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .foregroundColor(CPDPalette.textPrimary)
+                    .foregroundColor(ABPalette.textPrimary)
                 Spacer()
-                CPDChevron(color: CPDPalette.textMuted, size: 18)
+                ABChevron(color: ABPalette.textMuted, size: 18)
             }
             .padding(.vertical, 12)
             .contentShape(Rectangle())
@@ -135,24 +135,24 @@ struct SettingsView: View {
         HStack {
             Text(title)
                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .foregroundColor(CPDPalette.textPrimary)
+                .foregroundColor(ABPalette.textPrimary)
             Spacer()
             Text(value)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
-                .foregroundColor(CPDPalette.textSecondary)
+                .foregroundColor(ABPalette.textSecondary)
         }
         .padding(.vertical, 12)
     }
 
     private var divider: some View {
         Rectangle()
-            .fill(CPDPalette.panelRaised.opacity(0.6))
+            .fill(ABPalette.panelRaised.opacity(0.6))
             .frame(height: 1)
     }
 }
 
 // Custom toggle (no native styling reliance — themed track + knob).
-struct CPDToggle: View {
+struct ABToggle: View {
     @Binding var isOn: Bool
     var body: some View {
         Button {
@@ -160,7 +160,7 @@ struct CPDToggle: View {
         } label: {
             ZStack(alignment: isOn ? .trailing : .leading) {
                 Capsule()
-                    .fill(isOn ? CPDPalette.success : CPDPalette.panelRaised)
+                    .fill(isOn ? ABPalette.success : ABPalette.panelRaised)
                     .frame(width: 50, height: 30)
                 Circle()
                     .fill(Color.white)

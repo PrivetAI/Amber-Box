@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Deterministic seeded RNG (SplitMix64)
 
-struct CPDSplitMix64 {
+struct ABSplitMix64 {
     private var state: UInt64
     init(seed: UInt64) { self.state = seed }
 
@@ -26,24 +26,24 @@ struct CPDSplitMix64 {
 
 // MARK: - Tile model
 
-enum CPDTile: Int, Codable {
+enum ABTile: Int, Codable {
     case floor = 0
     case wall = 1
 }
 
-struct CPDPoint: Hashable, Codable {
+struct ABPoint: Hashable, Codable {
     var x: Int
     var y: Int
-    func offset(_ dir: CPDDirection) -> CPDPoint {
-        CPDPoint(x: x + dir.dx, y: y + dir.dy)
+    func offset(_ dir: ABDirection) -> ABPoint {
+        ABPoint(x: x + dir.dx, y: y + dir.dy)
     }
 }
 
-enum CPDDirection: Int, CaseIterable, Codable {
+enum ABDirection: Int, CaseIterable, Codable {
     case up, down, left, right
     var dx: Int { switch self { case .left: return -1; case .right: return 1; default: return 0 } }
     var dy: Int { switch self { case .up: return -1; case .down: return 1; default: return 0 } }
-    var opposite: CPDDirection {
+    var opposite: ABDirection {
         switch self {
         case .up: return .down; case .down: return .up
         case .left: return .right; case .right: return .left
@@ -53,15 +53,15 @@ enum CPDDirection: Int, CaseIterable, Codable {
 
 // MARK: - Level definition (puzzle start state + goals)
 
-struct CPDLevel: Codable {
+struct ABLevel: Codable {
     let index: Int            // 0-based global index 0..119
     let width: Int
     let height: Int
-    let tiles: [[Int]]        // [row][col] -> CPDTile.rawValue
-    let walls: Set<CPDPoint>
-    let goals: Set<CPDPoint>  // target pad cells
-    let cratesStart: [CPDPoint]
-    let workerStart: CPDPoint
+    let tiles: [[Int]]        // [row][col] -> ABTile.rawValue
+    let walls: Set<ABPoint>
+    let goals: Set<ABPoint>  // target pad cells
+    let cratesStart: [ABPoint]
+    let workerStart: ABPoint
     let par: Int              // reference par = reverse-construction worker-step length
 
     var chapter: Int { index / 20 }       // 0..5
@@ -69,15 +69,15 @@ struct CPDLevel: Codable {
 
     // Forward solution directions derived from the reverse-construction scramble.
     // Not persisted (regenerated deterministically); used for hint/verification only.
-    var solutionPath: [CPDDirection] = []
+    var solutionPath: [ABDirection] = []
 
     enum CodingKeys: String, CodingKey {
         case index, width, height, tiles, walls, goals, cratesStart, workerStart, par
     }
 
-    init(index: Int, width: Int, height: Int, tiles: [[Int]], walls: Set<CPDPoint>,
-         goals: Set<CPDPoint>, cratesStart: [CPDPoint], workerStart: CPDPoint,
-         par: Int, solutionPath: [CPDDirection] = []) {
+    init(index: Int, width: Int, height: Int, tiles: [[Int]], walls: Set<ABPoint>,
+         goals: Set<ABPoint>, cratesStart: [ABPoint], workerStart: ABPoint,
+         par: Int, solutionPath: [ABDirection] = []) {
         self.index = index
         self.width = width
         self.height = height
@@ -93,7 +93,7 @@ struct CPDLevel: Codable {
 
 // MARK: - Level generator (reverse construction guarantees solvability)
 
-enum CPDLevelGenerator {
+enum ABLevelGenerator {
 
     struct Spec {
         let width: Int
@@ -118,8 +118,8 @@ enum CPDLevelGenerator {
         return Spec(width: w, height: h, crates: max(1, crates), scrambleSteps: scramble)
     }
 
-    static func generate(index: Int) -> CPDLevel {
-        var rng = CPDSplitMix64(seed: seedSafe(for: index))
+    static func generate(index: Int) -> ABLevel {
+        var rng = ABSplitMix64(seed: seedSafe(for: index))
         let s = spec(for: index)
         let w = s.width, h = s.height
 
@@ -139,26 +139,26 @@ enum CPDLevelGenerator {
         return base &+ (UInt64(index) &* 0x9E3779B97F4A7C15) &+ 0xCA7
     }
 
-    private static func attempt(index: Int, spec s: Spec, rng: inout CPDSplitMix64) -> CPDLevel? {
+    private static func attempt(index: Int, spec s: Spec, rng: inout ABSplitMix64) -> ABLevel? {
         let w = s.width, h = s.height
 
         // Build interior wall ring is the border; interior is floor with some scattered walls.
-        var walls = Set<CPDPoint>()
+        var walls = Set<ABPoint>()
         // border walls
         for x in 0..<w {
-            walls.insert(CPDPoint(x: x, y: 0))
-            walls.insert(CPDPoint(x: x, y: h - 1))
+            walls.insert(ABPoint(x: x, y: 0))
+            walls.insert(ABPoint(x: x, y: h - 1))
         }
         for y in 0..<h {
-            walls.insert(CPDPoint(x: 0, y: y))
-            walls.insert(CPDPoint(x: w - 1, y: y))
+            walls.insert(ABPoint(x: 0, y: y))
+            walls.insert(ABPoint(x: w - 1, y: y))
         }
 
         // interior cells
-        var interior: [CPDPoint] = []
+        var interior: [ABPoint] = []
         for y in 1..<(h - 1) {
             for x in 1..<(w - 1) {
-                interior.append(CPDPoint(x: x, y: y))
+                interior.append(ABPoint(x: x, y: y))
             }
         }
         guard interior.count >= s.crates + 4 else { return nil }
@@ -168,7 +168,7 @@ enum CPDLevelGenerator {
         let obstacleCount = max(0, min(chapter - 1, (interior.count / 8)))
         var obstacleCandidates = interior
         shuffle(&obstacleCandidates, rng: &rng)
-        var placedObstacles = Set<CPDPoint>()
+        var placedObstacles = Set<ABPoint>()
         var oi = 0
         while placedObstacles.count < obstacleCount && oi < obstacleCandidates.count {
             let c = obstacleCandidates[oi]; oi += 1
@@ -187,8 +187,8 @@ enum CPDLevelGenerator {
         // Place goals (target pads) = solved crate positions.
         shuffle(&floors, rng: &rng)
         // pick goals not directly adjacent-clustered into impossible blocks
-        var goals: [CPDPoint] = []
-        var goalSet = Set<CPDPoint>()
+        var goals: [ABPoint] = []
+        var goalSet = Set<ABPoint>()
         var fi = 0
         while goals.count < s.crates && fi < floors.count {
             let c = floors[fi]; fi += 1
@@ -211,15 +211,15 @@ enum CPDLevelGenerator {
         // Perform reverse "pulls": choose a direction, the worker steps into a free
         // cell, and (optionally) drags the crate that was behind it. A normal solver
         // could reverse each such step. We bias toward producing pulls so crates move.
-        var lastDir: CPDDirection? = nil
+        var lastDir: ABDirection? = nil
         var attemptsLeft = s.scrambleSteps * 6
         var pulls = 0
         // Record each reverse step's move direction so a forward solution can be derived.
-        var scrambleDirs: [CPDDirection] = []
+        var scrambleDirs: [ABDirection] = []
 
         while pathLen < s.scrambleSteps && attemptsLeft > 0 {
             attemptsLeft -= 1
-            let dir = CPDDirection.allCases[rng.int(4)]
+            let dir = ABDirection.allCases[rng.int(4)]
             // avoid immediately undoing the previous move too often (keeps motion)
             if let ld = lastDir, dir == ld.opposite, rng.bool() { continue }
 
@@ -271,16 +271,16 @@ enum CPDLevelGenerator {
         }
 
         // Build tile grid.
-        var tiles = Array(repeating: Array(repeating: CPDTile.floor.rawValue, count: w), count: h)
+        var tiles = Array(repeating: Array(repeating: ABTile.floor.rawValue, count: w), count: h)
         for wcell in walls {
             if wcell.y >= 0 && wcell.y < h && wcell.x >= 0 && wcell.x < w {
-                tiles[wcell.y][wcell.x] = CPDTile.wall.rawValue
+                tiles[wcell.y][wcell.x] = ABTile.wall.rawValue
             }
         }
 
         let cratesArr = Array(crates).sorted { ($0.y, $0.x) < ($1.y, $1.x) }
 
-        return CPDLevel(
+        return ABLevel(
             index: index,
             width: w,
             height: h,
@@ -296,9 +296,9 @@ enum CPDLevelGenerator {
 
     // MARK: - Validators / helpers
 
-    private static func isDeadCorner(_ p: CPDPoint, walls: Set<CPDPoint>, goals: Set<CPDPoint>, w: Int, h: Int) -> Bool {
+    private static func isDeadCorner(_ p: ABPoint, walls: Set<ABPoint>, goals: Set<ABPoint>, w: Int, h: Int) -> Bool {
         if goals.contains(p) { return false }
-        func blocked(_ pt: CPDPoint) -> Bool {
+        func blocked(_ pt: ABPoint) -> Bool {
             if pt.x < 0 || pt.y < 0 || pt.x >= w || pt.y >= h { return true }
             return walls.contains(pt)
         }
@@ -312,14 +312,14 @@ enum CPDLevelGenerator {
         return corner
     }
 
-    private static func isConnected(floors: Set<CPDPoint>, w: Int, h: Int) -> Bool {
+    private static func isConnected(floors: Set<ABPoint>, w: Int, h: Int) -> Bool {
         guard let start = floors.first else { return false }
-        var seen = Set<CPDPoint>()
+        var seen = Set<ABPoint>()
         var stack = [start]
         while let cur = stack.popLast() {
             if seen.contains(cur) { continue }
             seen.insert(cur)
-            for d in CPDDirection.allCases {
+            for d in ABDirection.allCases {
                 let n = cur.offset(d)
                 if floors.contains(n) && !seen.contains(n) { stack.append(n) }
             }
@@ -327,19 +327,19 @@ enum CPDLevelGenerator {
         return seen.count == floors.count
     }
 
-    private static func workerCanReachAnyPushSpot(worker: CPDPoint, crates: Set<CPDPoint>, walls: Set<CPDPoint>, goals: Set<CPDPoint>, w: Int, h: Int) -> Bool {
+    private static func workerCanReachAnyPushSpot(worker: ABPoint, crates: Set<ABPoint>, walls: Set<ABPoint>, goals: Set<ABPoint>, w: Int, h: Int) -> Bool {
         // BFS over cells the worker can stand on (floor, non-crate).
-        func passable(_ p: CPDPoint) -> Bool {
+        func passable(_ p: ABPoint) -> Bool {
             if p.x < 0 || p.y < 0 || p.x >= w || p.y >= h { return false }
             if walls.contains(p) { return false }
             if crates.contains(p) { return false }
             return true
         }
-        var seen = Set<CPDPoint>([worker])
+        var seen = Set<ABPoint>([worker])
         var queue = [worker]
         while !queue.isEmpty {
             let cur = queue.removeFirst()
-            for d in CPDDirection.allCases {
+            for d in ABDirection.allCases {
                 let n = cur.offset(d)
                 if passable(n) && !seen.contains(n) {
                     seen.insert(n)
@@ -349,7 +349,7 @@ enum CPDLevelGenerator {
         }
         // For each displaced crate, is the worker beside a side from which a valid push exists?
         for crate in crates where !goals.contains(crate) {
-            for d in CPDDirection.allCases {
+            for d in ABDirection.allCases {
                 let pushFrom = crate.offset(d.opposite) // stand here to push crate toward d
                 let pushTo = crate.offset(d)
                 let toFree = !walls.contains(pushTo) && !crates.contains(pushTo) &&
@@ -360,7 +360,7 @@ enum CPDLevelGenerator {
         return false
     }
 
-    private static func shuffle<T>(_ arr: inout [T], rng: inout CPDSplitMix64) {
+    private static func shuffle<T>(_ arr: inout [T], rng: inout ABSplitMix64) {
         guard arr.count > 1 else { return }
         for i in stride(from: arr.count - 1, to: 0, by: -1) {
             let j = rng.int(i + 1)
@@ -368,22 +368,22 @@ enum CPDLevelGenerator {
         }
     }
 
-    private static func pick<T>(_ arr: [T], rng: inout CPDSplitMix64) -> T? {
+    private static func pick<T>(_ arr: [T], rng: inout ABSplitMix64) -> T? {
         guard !arr.isEmpty else { return nil }
         return arr[rng.int(arr.count)]
     }
 
-    private static func fallback(index: Int, w: Int, h: Int) -> CPDLevel {
-        var walls = Set<CPDPoint>()
-        for x in 0..<w { walls.insert(CPDPoint(x: x, y: 0)); walls.insert(CPDPoint(x: x, y: h - 1)) }
-        for y in 0..<h { walls.insert(CPDPoint(x: 0, y: y)); walls.insert(CPDPoint(x: w - 1, y: y)) }
+    private static func fallback(index: Int, w: Int, h: Int) -> ABLevel {
+        var walls = Set<ABPoint>()
+        for x in 0..<w { walls.insert(ABPoint(x: x, y: 0)); walls.insert(ABPoint(x: x, y: h - 1)) }
+        for y in 0..<h { walls.insert(ABPoint(x: 0, y: y)); walls.insert(ABPoint(x: w - 1, y: y)) }
         // one goal in center-left, crate one cell to its right, worker right of crate.
-        let goal = CPDPoint(x: 2, y: h / 2)
-        let crate = CPDPoint(x: 3, y: h / 2)
-        let worker = CPDPoint(x: 4, y: h / 2)
-        var tiles = Array(repeating: Array(repeating: CPDTile.floor.rawValue, count: w), count: h)
-        for c in walls { tiles[c.y][c.x] = CPDTile.wall.rawValue }
-        return CPDLevel(
+        let goal = ABPoint(x: 2, y: h / 2)
+        let crate = ABPoint(x: 3, y: h / 2)
+        let worker = ABPoint(x: 4, y: h / 2)
+        var tiles = Array(repeating: Array(repeating: ABTile.floor.rawValue, count: w), count: h)
+        for c in walls { tiles[c.y][c.x] = ABTile.wall.rawValue }
+        return ABLevel(
             index: index, width: w, height: h, tiles: tiles, walls: walls,
             goals: [goal], cratesStart: [crate], workerStart: worker, par: 1
         )

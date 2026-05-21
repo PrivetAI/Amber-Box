@@ -1,25 +1,25 @@
 import SwiftUI
 
 struct GameView: View {
-    @EnvironmentObject var store: CPDStore
+    @EnvironmentObject var store: ABStore
     @Environment(\.presentationMode) private var presentationMode
 
     let levelIndex: Int
-    @StateObject private var game: CPDGameModel
+    @StateObject private var game: ABGameModel
     @State private var showWin = false
     @State private var goNext = false
 
     init(levelIndex: Int) {
         self.levelIndex = levelIndex
-        let level = CPDLevelCache.shared.level(levelIndex)
-        _game = StateObject(wrappedValue: CPDGameModel(level: level))
+        let level = ABLevelCache.shared.level(levelIndex)
+        _game = StateObject(wrappedValue: ABGameModel(level: level))
     }
 
-    private var hasNext: Bool { levelIndex + 1 < CPDStore.totalLevels }
+    private var hasNext: Bool { levelIndex + 1 < ABStore.totalLevels }
 
     var body: some View {
         ZStack {
-            CPDBackground()
+            ABBackground()
             GeometryReader { geo in
                 gameBody(parentSize: geo.size)
             }
@@ -101,17 +101,17 @@ struct GameView: View {
         VStack(spacing: 3) {
             Text(value)
                 .font(.system(size: 19, weight: .heavy, design: .rounded))
-                .foregroundColor(CPDPalette.textPrimary)
+                .foregroundColor(ABPalette.textPrimary)
             Text(label)
                 .font(.system(size: 10, weight: .bold, design: .rounded))
                 .tracking(1)
-                .foregroundColor(CPDPalette.textMuted)
+                .foregroundColor(ABPalette.textMuted)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: CPDMetrics.cornerSmall, style: .continuous)
-                .fill(CPDPalette.panel)
+            RoundedRectangle(cornerRadius: ABMetrics.cornerSmall, style: .continuous)
+                .fill(ABPalette.panel)
         )
     }
 
@@ -122,7 +122,7 @@ struct GameView: View {
         let maxW = landscape ? parentSize.width * 0.60 : parentSize.width - 32
         let maxH = landscape ? parentSize.height - 80 : parentSize.height * 0.52
         let side = max(120, min(maxW, maxH))
-        return CPDBoardView(game: game, side: side, store: store)
+        return ABBoardView(game: game, side: side, store: store)
             .frame(width: side, height: side)
             .frame(maxWidth: .infinity)
     }
@@ -131,7 +131,7 @@ struct GameView: View {
 
     private var controlsRow: some View {
         HStack(alignment: .center, spacing: 18) {
-            sideButton(icon: AnyView(CPDUndoIcon(color: game.canUndo ? CPDPalette.textPrimary : CPDPalette.textMuted, size: 26)),
+            sideButton(icon: AnyView(ABUndoIcon(color: game.canUndo ? ABPalette.textPrimary : ABPalette.textMuted, size: 26)),
                        label: "Undo",
                        enabled: game.canUndo) {
                 game.undo(store: store)
@@ -139,7 +139,7 @@ struct GameView: View {
             Spacer()
             dpad
             Spacer()
-            sideButton(icon: AnyView(CPDRestartIcon(color: CPDPalette.textPrimary, size: 26)),
+            sideButton(icon: AnyView(ABRestartIcon(color: ABPalette.textPrimary, size: 26)),
                        label: "Restart",
                        enabled: true) {
                 game.restart(store: store)
@@ -154,12 +154,12 @@ struct GameView: View {
         VStack(spacing: 18) {
             dpad
             HStack(spacing: 14) {
-                sideButton(icon: AnyView(CPDUndoIcon(color: game.canUndo ? CPDPalette.textPrimary : CPDPalette.textMuted, size: 24)),
+                sideButton(icon: AnyView(ABUndoIcon(color: game.canUndo ? ABPalette.textPrimary : ABPalette.textMuted, size: 24)),
                            label: "Undo",
                            enabled: game.canUndo) {
                     game.undo(store: store)
                 }
-                sideButton(icon: AnyView(CPDRestartIcon(color: CPDPalette.textPrimary, size: 24)),
+                sideButton(icon: AnyView(ABRestartIcon(color: ABPalette.textPrimary, size: 24)),
                            label: "Restart",
                            enabled: true) {
                     game.restart(store: store)
@@ -173,13 +173,13 @@ struct GameView: View {
             VStack(spacing: 5) {
                 ZStack {
                     Circle()
-                        .fill(CPDPalette.panel)
+                        .fill(ABPalette.panel)
                         .frame(width: 56, height: 56)
                     icon
                 }
                 Text(label)
                     .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundColor(enabled ? CPDPalette.textSecondary : CPDPalette.textMuted)
+                    .foregroundColor(enabled ? ABPalette.textSecondary : ABPalette.textMuted)
             }
         }
         .disabled(!enabled)
@@ -195,10 +195,10 @@ struct GameView: View {
                 arrowButton(.left)
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(CPDPalette.panel.opacity(0.5))
+                        .fill(ABPalette.panel.opacity(0.5))
                         .frame(width: 56, height: 56)
                     Circle()
-                        .fill(CPDPalette.panelRaised)
+                        .fill(ABPalette.panelRaised)
                         .frame(width: 16, height: 16)
                 }
                 arrowButton(.right)
@@ -207,16 +207,16 @@ struct GameView: View {
         }
     }
 
-    private func arrowButton(_ dir: CPDDirection) -> some View {
+    private func arrowButton(_ dir: ABDirection) -> some View {
         Button {
             _ = game.move(dir, store: store)
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(CPDPalette.panelRaised)
+                    .fill(ABPalette.panelRaised)
                     .frame(width: 56, height: 56)
-                CPDArrowShape()
-                    .fill(CPDPalette.accent)
+                ABArrowShape()
+                    .fill(ABPalette.accent)
                     .frame(width: 30, height: 30)
                     .rotationEffect(rotation(for: dir))
             }
@@ -224,7 +224,7 @@ struct GameView: View {
         .disabled(game.solved)
     }
 
-    private func rotation(for dir: CPDDirection) -> Angle {
+    private func rotation(for dir: ABDirection) -> Angle {
         switch dir {
         case .up: return .degrees(0)
         case .right: return .degrees(90)
@@ -242,11 +242,11 @@ struct GameView: View {
                 Text("DEPOT CLEARED")
                     .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .tracking(1.5)
-                    .foregroundColor(CPDPalette.textPrimary)
+                    .foregroundColor(ABPalette.textPrimary)
 
                 HStack(spacing: 14) {
                     ForEach(0..<3, id: \.self) { i in
-                        CPDStar(filled: i < game.currentStars, size: 46)
+                        ABStar(filled: i < game.currentStars, size: 46)
                             .scaleEffect(i < game.currentStars ? 1.0 : 0.82)
                     }
                 }
@@ -258,11 +258,11 @@ struct GameView: View {
                     if game.currentStars == 3 {
                         Text("Perfect — par or better!")
                             .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundColor(CPDPalette.success)
+                            .foregroundColor(ABPalette.success)
                     } else {
                         Text(starHint)
                             .font(.system(size: 12, weight: .semibold, design: .rounded))
-                            .foregroundColor(CPDPalette.textSecondary)
+                            .foregroundColor(ABPalette.textSecondary)
                     }
                 }
                 .padding(.vertical, 4)
@@ -286,10 +286,10 @@ struct GameView: View {
             .frame(maxWidth: 360)
             .background(
                 RoundedRectangle(cornerRadius: 22, style: .continuous)
-                    .fill(CPDPalette.panel)
+                    .fill(ABPalette.panel)
                     .overlay(
                         RoundedRectangle(cornerRadius: 22, style: .continuous)
-                            .stroke(CPDPalette.accent.opacity(0.25), lineWidth: 1.5)
+                            .stroke(ABPalette.accent.opacity(0.25), lineWidth: 1.5)
                     )
             )
             .padding(.horizontal, 28)
@@ -309,11 +309,11 @@ struct GameView: View {
         HStack {
             Text(label)
                 .font(.system(size: 14, weight: .semibold, design: .rounded))
-                .foregroundColor(CPDPalette.textSecondary)
+                .foregroundColor(ABPalette.textSecondary)
             Spacer()
             Text(value)
                 .font(.system(size: 15, weight: .heavy, design: .rounded))
-                .foregroundColor(CPDPalette.textPrimary)
+                .foregroundColor(ABPalette.textPrimary)
         }
         .frame(maxWidth: 200)
     }
@@ -322,12 +322,12 @@ struct GameView: View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 16, weight: .bold, design: .rounded))
-                .foregroundColor(primary ? CPDPalette.backgroundDeep : CPDPalette.textPrimary)
+                .foregroundColor(primary ? ABPalette.backgroundDeep : ABPalette.textPrimary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 13)
                 .background(
                     RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(primary ? CPDPalette.accent : CPDPalette.panelRaised)
+                        .fill(primary ? ABPalette.accent : ABPalette.panelRaised)
                 )
         }
         .buttonStyle(.plain)
@@ -336,10 +336,10 @@ struct GameView: View {
 
 // MARK: - Board view (grid + tiles + swipe gestures)
 
-struct CPDBoardView: View {
-    @ObservedObject var game: CPDGameModel
+struct ABBoardView: View {
+    @ObservedObject var game: ABGameModel
     let side: CGFloat
-    let store: CPDStore
+    let store: ABStore
 
     var body: some View {
         let cols = game.level.width
@@ -350,7 +350,7 @@ struct CPDBoardView: View {
 
         ZStack {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(CPDPalette.backgroundDeep)
+                .fill(ABPalette.backgroundDeep)
                 .frame(width: boardW + 14, height: boardH + 14)
 
             ZStack(alignment: .topLeading) {
@@ -362,21 +362,21 @@ struct CPDBoardView: View {
                 }
                 // pads (drawn above floor, below crates)
                 ForEach(Array(game.goals), id: \.self) { goal in
-                    CPDPadShape()
+                    ABPadShape()
                         .frame(width: cell, height: cell)
                         .position(x: CGFloat(goal.x) * cell + cell / 2,
                                   y: CGFloat(goal.y) * cell + cell / 2)
                 }
                 // crates
                 ForEach(Array(game.crates), id: \.self) { crate in
-                    CPDCrateShape(seated: game.isGoal(crate))
+                    ABCrateShape(seated: game.isGoal(crate))
                         .frame(width: cell, height: cell)
                         .position(x: CGFloat(crate.x) * cell + cell / 2,
                                   y: CGFloat(crate.y) * cell + cell / 2)
                         .animation(.easeOut(duration: 0.12), value: game.crates)
                 }
                 // worker
-                CPDWorkerShape()
+                ABWorkerShape()
                     .frame(width: cell * 0.92, height: cell * 0.92)
                     .position(x: CGFloat(game.worker.x) * cell + cell / 2,
                               y: CGFloat(game.worker.y) * cell + cell / 2)
@@ -391,15 +391,15 @@ struct CPDBoardView: View {
 
     @ViewBuilder
     private func cellBackground(x: Int, y: Int, cell: CGFloat) -> some View {
-        let p = CPDPoint(x: x, y: y)
-        let isWall = game.level.tiles[y][x] == CPDTile.wall.rawValue
+        let p = ABPoint(x: x, y: y)
+        let isWall = game.level.tiles[y][x] == ABTile.wall.rawValue
         Group {
             if isWall {
-                CPDWallShape()
+                ABWallShape()
             } else {
                 Rectangle()
-                    .fill((x + y) % 2 == 0 ? CPDPalette.floor : CPDPalette.floorAlt)
-                    .overlay(Rectangle().stroke(CPDPalette.gridLine, lineWidth: 0.5))
+                    .fill((x + y) % 2 == 0 ? ABPalette.floor : ABPalette.floorAlt)
+                    .overlay(Rectangle().stroke(ABPalette.gridLine, lineWidth: 0.5))
             }
         }
         .frame(width: cell, height: cell)
@@ -413,7 +413,7 @@ struct CPDBoardView: View {
                 let dx = value.translation.width
                 let dy = value.translation.height
                 guard abs(dx) > 14 || abs(dy) > 14 else { return }
-                let dir: CPDDirection
+                let dir: ABDirection
                 if abs(dx) > abs(dy) {
                     dir = dx > 0 ? .right : .left
                 } else {

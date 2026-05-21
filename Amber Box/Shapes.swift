@@ -4,10 +4,10 @@ import SwiftUI
 
 // MARK: - Worker
 
-struct CPDWorkerShape: View {
-    var color: Color = CPDPalette.worker
-    var dark: Color = CPDPalette.workerDark
-    var visor: Color = CPDPalette.workerVisor
+struct ABWorkerShape: View {
+    var color: Color = ABPalette.worker
+    var dark: Color = ABPalette.workerDark
+    var visor: Color = ABPalette.workerVisor
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
@@ -34,7 +34,7 @@ struct CPDWorkerShape: View {
                     p.addLine(to: CGPoint(x: cx - w * 0.40, y: topY + w * 0.40))
                     p.closeSubpath()
                 }
-                .fill(CPDPalette.accent)
+                .fill(ABPalette.accent)
                 // face plate
                 Capsule()
                     .fill(visor)
@@ -48,16 +48,16 @@ struct CPDWorkerShape: View {
 
 // MARK: - Crate (box with cross-bracing)
 
-struct CPDCrateShape: View {
+struct ABCrateShape: View {
     var seated: Bool = false
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
             let inset = s * 0.10
             let r = s * 0.10
-            let base = seated ? CPDPalette.crateOnPad : CPDPalette.crate
-            let edge = seated ? CPDPalette.pad : CPDPalette.crateDark
-            let light = seated ? CPDPalette.padGlow : CPDPalette.crateLight
+            let base = seated ? ABPalette.crateOnPad : ABPalette.crate
+            let edge = seated ? ABPalette.pad : ABPalette.crateDark
+            let light = seated ? ABPalette.padGlow : ABPalette.crateLight
             ZStack {
                 RoundedRectangle(cornerRadius: r, style: .continuous)
                     .fill(base)
@@ -89,22 +89,22 @@ struct CPDCrateShape: View {
 
 // MARK: - Target pad (ring)
 
-struct CPDPadShape: View {
+struct ABPadShape: View {
     var body: some View {
         GeometryReader { geo in
             let s = min(geo.size.width, geo.size.height)
             ZStack {
                 Circle()
-                    .fill(CPDPalette.pad.opacity(0.16))
+                    .fill(ABPalette.pad.opacity(0.16))
                     .frame(width: s * 0.66, height: s * 0.66)
                 Circle()
-                    .stroke(CPDPalette.pad, lineWidth: s * 0.07)
+                    .stroke(ABPalette.pad, lineWidth: s * 0.07)
                     .frame(width: s * 0.62, height: s * 0.62)
                 Circle()
-                    .stroke(CPDPalette.padGlow.opacity(0.7), lineWidth: s * 0.03)
+                    .stroke(ABPalette.padGlow.opacity(0.7), lineWidth: s * 0.03)
                     .frame(width: s * 0.36, height: s * 0.36)
                 Circle()
-                    .fill(CPDPalette.padGlow)
+                    .fill(ABPalette.padGlow)
                     .frame(width: s * 0.12, height: s * 0.12)
             }
             .frame(width: geo.size.width, height: geo.size.height)
@@ -114,13 +114,13 @@ struct CPDPadShape: View {
 
 // MARK: - Wall block
 
-struct CPDWallShape: View {
+struct ABWallShape: View {
     var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height
             ZStack {
-                Rectangle().fill(CPDPalette.wall)
+                Rectangle().fill(ABPalette.wall)
                 // brick courses
                 Path { p in
                     let rows = 3
@@ -143,9 +143,9 @@ struct CPDWallShape: View {
                         }
                     }
                 }
-                .stroke(CPDPalette.wallEdge, lineWidth: max(1, w * 0.04))
+                .stroke(ABPalette.wallEdge, lineWidth: max(1, w * 0.04))
                 Rectangle()
-                    .stroke(CPDPalette.wallEdge, lineWidth: max(1, w * 0.05))
+                    .stroke(ABPalette.wallEdge, lineWidth: max(1, w * 0.05))
             }
         }
     }
@@ -153,7 +153,7 @@ struct CPDWallShape: View {
 
 // MARK: - D-pad arrow
 
-struct CPDArrowShape: Shape {
+struct ABArrowShape: Shape {
     // points up by default; rotate via view.
     func path(in rect: CGRect) -> Path {
         var p = Path()
@@ -172,7 +172,7 @@ struct CPDArrowShape: Shape {
 
 // MARK: - Star
 
-struct CPDStarShape: Shape {
+struct ABStarShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         let c = CGPoint(x: rect.midX, y: rect.midY)
@@ -190,14 +190,14 @@ struct CPDStarShape: Shape {
     }
 }
 
-struct CPDStar: View {
+struct ABStar: View {
     var filled: Bool
     var size: CGFloat
     var body: some View {
-        CPDStarShape()
-            .fill(filled ? CPDPalette.star : CPDPalette.starEmpty)
+        ABStarShape()
+            .fill(filled ? ABPalette.star : ABPalette.starEmpty)
             .overlay(
-                CPDStarShape().stroke(filled ? CPDPalette.star.opacity(0.6) : CPDPalette.starEmpty.opacity(0.6), lineWidth: 1)
+                ABStarShape().stroke(filled ? ABPalette.star.opacity(0.6) : ABPalette.starEmpty.opacity(0.6), lineWidth: 1)
             )
             .frame(width: size, height: size)
     }
@@ -205,7 +205,7 @@ struct CPDStar: View {
 
 // MARK: - Gear
 
-struct CPDGearShape: Shape {
+struct ABGearShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         let c = CGPoint(x: rect.midX, y: rect.midY)
@@ -226,11 +226,11 @@ struct CPDGearShape: Shape {
     }
 }
 
-struct CPDGearIcon: View {
+struct ABGearIcon: View {
     var color: Color
     var size: CGFloat
     var body: some View {
-        CPDGearShape()
+        ABGearShape()
             .fill(style: FillStyle(eoFill: true))
             .foregroundColor(color)
             .frame(width: size, height: size)
@@ -239,7 +239,7 @@ struct CPDGearIcon: View {
 
 // MARK: - Lock
 
-struct CPDLockIcon: View {
+struct ABLockIcon: View {
     var color: Color
     var size: CGFloat
     var body: some View {
@@ -264,7 +264,7 @@ struct CPDLockIcon: View {
 
 // MARK: - Chevron
 
-struct CPDChevronShape: Shape {
+struct ABChevronShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         let w = rect.width, h = rect.height
@@ -275,12 +275,12 @@ struct CPDChevronShape: Shape {
     }
 }
 
-struct CPDChevron: View {
+struct ABChevron: View {
     var color: Color
     var size: CGFloat
     var lineWidth: CGFloat = 2.4
     var body: some View {
-        CPDChevronShape()
+        ABChevronShape()
             .stroke(color, style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
             .frame(width: size, height: size)
     }
@@ -288,7 +288,7 @@ struct CPDChevron: View {
 
 // MARK: - Undo arrow
 
-struct CPDUndoIcon: View {
+struct ABUndoIcon: View {
     var color: Color
     var size: CGFloat
     var body: some View {
@@ -317,7 +317,7 @@ struct CPDUndoIcon: View {
 
 // MARK: - Restart arrow (circular)
 
-struct CPDRestartIcon: View {
+struct ABRestartIcon: View {
     var color: Color
     var size: CGFloat
     var body: some View {
@@ -346,7 +346,7 @@ struct CPDRestartIcon: View {
 
 // MARK: - Checkmark
 
-struct CPDCheckShape: Shape {
+struct ABCheckShape: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         let w = rect.width, h = rect.height
@@ -359,13 +359,13 @@ struct CPDCheckShape: Shape {
 
 // MARK: - Small worker glyph for menu / header (logo-free abstract mark)
 
-struct CPDDepotMark: View {
+struct ABDepotMark: View {
     var size: CGFloat
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-                .fill(CPDPalette.panelRaised)
-            CPDCrateShape()
+                .fill(ABPalette.panelRaised)
+            ABCrateShape()
                 .frame(width: size * 0.7, height: size * 0.7)
         }
         .frame(width: size, height: size)

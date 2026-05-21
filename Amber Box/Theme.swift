@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Industrial depot palette — slate / steel-blue, amber crates, teal pads, dark walls, warm accent.
-enum CPDPalette {
+enum ABPalette {
     static let background = Color(red: 0.16, green: 0.20, blue: 0.27)      // slate
     static let backgroundDeep = Color(red: 0.11, green: 0.14, blue: 0.20)  // deeper slate
     static let panel = Color(red: 0.22, green: 0.27, blue: 0.35)           // steel-blue panel
@@ -38,38 +38,38 @@ enum CPDPalette {
     static let success = Color(red: 0.40, green: 0.82, blue: 0.62)
 }
 
-enum CPDMetrics {
+enum ABMetrics {
     static let corner: CGFloat = 16
     static let cornerSmall: CGFloat = 10
 }
 
 // Reusable raised panel background.
-struct CPDPanel: ViewModifier {
-    var corner: CGFloat = CPDMetrics.corner
+struct ABPanel: ViewModifier {
+    var corner: CGFloat = ABMetrics.corner
     func body(content: Content) -> some View {
         content
             .background(
                 RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(CPDPalette.panel)
+                    .fill(ABPalette.panel)
                     .overlay(
                         RoundedRectangle(cornerRadius: corner, style: .continuous)
-                            .stroke(CPDPalette.panelRaised, lineWidth: 1)
+                            .stroke(ABPalette.panelRaised, lineWidth: 1)
                     )
             )
     }
 }
 
 extension View {
-    func cpdPanel(corner: CGFloat = CPDMetrics.corner) -> some View {
-        modifier(CPDPanel(corner: corner))
+    func abPanel(corner: CGFloat = ABMetrics.corner) -> some View {
+        modifier(ABPanel(corner: corner))
     }
 }
 
 // Background gradient used across screens.
-struct CPDBackground: View {
+struct ABBackground: View {
     var body: some View {
         LinearGradient(
-            colors: [CPDPalette.background, CPDPalette.backgroundDeep],
+            colors: [ABPalette.background, ABPalette.backgroundDeep],
             startPoint: .top,
             endPoint: .bottom
         )

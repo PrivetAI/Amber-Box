@@ -2,31 +2,31 @@ import Foundation
 import SwiftUI
 
 // One reversible step recorded for undo.
-private struct CPDUndoStep {
-    let workerFrom: CPDPoint
-    let workerTo: CPDPoint
-    let pushedCrateFrom: CPDPoint?   // nil if no crate was pushed
-    let pushedCrateTo: CPDPoint?
+private struct ABUndoStep {
+    let workerFrom: ABPoint
+    let workerTo: ABPoint
+    let pushedCrateFrom: ABPoint?   // nil if no crate was pushed
+    let pushedCrateTo: ABPoint?
 }
 
-final class CPDGameModel: ObservableObject {
-    let level: CPDLevel
+final class ABGameModel: ObservableObject {
+    let level: ABLevel
 
-    @Published private(set) var worker: CPDPoint
-    @Published private(set) var crates: Set<CPDPoint>
+    @Published private(set) var worker: ABPoint
+    @Published private(set) var crates: Set<ABPoint>
     @Published private(set) var moves: Int = 0
     @Published private(set) var pushes: Int = 0
     @Published private(set) var solved: Bool = false
-    @Published private(set) var facing: CPDDirection = .down
+    @Published private(set) var facing: ABDirection = .down
     @Published private(set) var lastPushAnimationTick: Int = 0
 
-    private var undoStack: [CPDUndoStep] = []
+    private var undoStack: [ABUndoStep] = []
 
     var canUndo: Bool { !undoStack.isEmpty }
-    var goals: Set<CPDPoint> { level.goals }
+    var goals: Set<ABPoint> { level.goals }
     var par: Int { level.par }
 
-    init(level: CPDLevel) {
+    init(level: ABLevel) {
         self.level = level
         self.worker = level.workerStart
         self.crates = Set(level.cratesStart)
@@ -34,20 +34,20 @@ final class CPDGameModel: ObservableObject {
 
     // MARK: - Queries
 
-    func isWall(_ p: CPDPoint) -> Bool {
+    func isWall(_ p: ABPoint) -> Bool {
         if p.x < 0 || p.y < 0 || p.x >= level.width || p.y >= level.height { return true }
-        return level.tiles[p.y][p.x] == CPDTile.wall.rawValue
+        return level.tiles[p.y][p.x] == ABTile.wall.rawValue
     }
-    func hasCrate(_ p: CPDPoint) -> Bool { crates.contains(p) }
-    func isGoal(_ p: CPDPoint) -> Bool { level.goals.contains(p) }
-    func crateSeated(_ p: CPDPoint) -> Bool { crates.contains(p) && level.goals.contains(p) }
+    func hasCrate(_ p: ABPoint) -> Bool { crates.contains(p) }
+    func isGoal(_ p: ABPoint) -> Bool { level.goals.contains(p) }
+    func crateSeated(_ p: ABPoint) -> Bool { crates.contains(p) && level.goals.contains(p) }
 
     var crateSeatedCount: Int { crates.filter { level.goals.contains($0) }.count }
     var crateTotal: Int { crates.count }
 
     var currentStars: Int {
         guard solved else { return 0 }
-        return CPDStore.starCount(moves: moves, par: level.par)
+        return ABStore.starCount(moves: moves, par: level.par)
     }
 
     // MARK: - Move
@@ -55,7 +55,7 @@ final class CPDGameModel: ObservableObject {
     /// Attempt to move the worker one cell in `dir`. Pushes a crate if present and
     /// the destination beyond it is free floor. Worker can never pull.
     @discardableResult
-    func move(_ dir: CPDDirection, store: CPDStore) -> Bool {
+    func move(_ dir: ABDirection, store: ABStore) -> Bool {
         if solved { return false }
         facing = dir
         let target = worker.offset(dir)
@@ -71,31 +71,31 @@ final class CPDGameModel: ObservableObject {
             // perform push
             crates.remove(target)
             crates.insert(beyond)
-            let step = CPDUndoStep(workerFrom: worker, workerTo: target,
+            let step = ABUndoStep(workerFrom: worker, workerTo: target,
                                    pushedCrateFrom: target, pushedCrateTo: beyond)
             undoStack.append(step)
             worker = target
             moves += 1
             pushes += 1
             lastPushAnimationTick &+= 1
-            CPDFeedback.push(store)
+            ABFeedback.push(store)
             checkSolved(store: store)
             return true
         } else {
             // plain move into empty floor
-            let step = CPDUndoStep(workerFrom: worker, workerTo: target,
+            let step = ABUndoStep(workerFrom: worker, workerTo: target,
                                    pushedCrateFrom: nil, pushedCrateTo: nil)
             undoStack.append(step)
             worker = target
             moves += 1
-            CPDFeedback.tap(store)
+            ABFeedback.tap(store)
             return true
         }
     }
 
     // MARK: - Undo
 
-    func undo(store: CPDStore) {
+    func undo(store: ABStore) {
         guard let step = undoStack.popLast() else { return }
         // reverse crate push first
         if let cFrom = step.pushedCrateFrom, let cTo = step.pushedCrateTo {
@@ -108,12 +108,12 @@ final class CPDGameModel: ObservableObject {
         // undoing un-solves if it was solved (cannot normally undo after solve since input is locked,
         // but keep state consistent).
         solved = (crateSeatedCount == crateTotal && crateTotal > 0)
-        CPDFeedback.tap(store)
+        ABFeedback.tap(store)
     }
 
     // MARK: - Restart
 
-    func restart(store: CPDStore) {
+    func restart(store: ABStore) {
         worker = level.workerStart
         crates = Set(level.cratesStart)
         moves = 0
@@ -121,17 +121,17 @@ final class CPDGameModel: ObservableObject {
         solved = false
         facing = .down
         undoStack.removeAll()
-        CPDFeedback.tap(store)
+        ABFeedback.tap(store)
     }
 
     // MARK: - Win
 
-    private func checkSolved(store: CPDStore) {
+    private func checkSolved(store: ABStore) {
         guard crateTotal > 0 else { return }
         if crateSeatedCount == crateTotal {
             solved = true
             store.recordResult(index: level.index, moves: moves, par: level.par)
-            CPDFeedback.success(store)
+            ABFeedback.success(store)
         }
     }
 }

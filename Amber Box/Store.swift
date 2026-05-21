@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - Persisted progress for a single level
 
-struct CPDLevelProgress: Codable {
+struct ABLevelProgress: Codable {
     var stars: Int        // 0..3
     var bestMoves: Int    // best (lowest) moves to solve; 0 == unsolved
     var solved: Bool
@@ -26,7 +26,7 @@ struct CPDLevelProgress: Codable {
 
 // MARK: - Settings
 
-struct CPDSettings: Codable {
+struct ABSettings: Codable {
     var soundOn: Bool
     var hapticsOn: Bool
 
@@ -46,13 +46,13 @@ struct CPDSettings: Codable {
 
 // MARK: - Store (Codable + UserDefaults under cpd.*)
 
-final class CPDStore: ObservableObject {
+final class ABStore: ObservableObject {
     static let totalLevels = 120
     static let chapters = 6
     static let levelsPerChapter = 20
 
-    @Published private(set) var progress: [CPDLevelProgress]
-    @Published var settings: CPDSettings
+    @Published private(set) var progress: [ABLevelProgress]
+    @Published var settings: ABSettings
     @Published var onboardingDone: Bool
 
     private let progressKey = "cpd.progress.v1"
@@ -64,19 +64,19 @@ final class CPDStore: ObservableObject {
 
         // progress
         if let data = d.data(forKey: progressKey),
-           let decoded = try? JSONDecoder().decode([CPDLevelProgress].self, from: data),
-           decoded.count == CPDStore.totalLevels {
+           let decoded = try? JSONDecoder().decode([ABLevelProgress].self, from: data),
+           decoded.count == ABStore.totalLevels {
             progress = decoded
         } else {
-            progress = Array(repeating: CPDLevelProgress(), count: CPDStore.totalLevels)
+            progress = Array(repeating: ABLevelProgress(), count: ABStore.totalLevels)
         }
 
         // settings
         if let data = d.data(forKey: settingsKey),
-           let decoded = try? JSONDecoder().decode(CPDSettings.self, from: data) {
+           let decoded = try? JSONDecoder().decode(ABSettings.self, from: data) {
             settings = decoded
         } else {
-            settings = CPDSettings()
+            settings = ABSettings()
         }
 
         onboardingDone = d.bool(forKey: onboardingKey)
@@ -103,14 +103,14 @@ final class CPDStore: ObservableObject {
 
     // MARK: queries
 
-    func progress(for index: Int) -> CPDLevelProgress {
-        guard index >= 0 && index < progress.count else { return CPDLevelProgress() }
+    func progress(for index: Int) -> ABLevelProgress {
+        guard index >= 0 && index < progress.count else { return ABLevelProgress() }
         return progress[index]
     }
 
     func stars(forChapter chapter: Int) -> Int {
-        let start = chapter * CPDStore.levelsPerChapter
-        let end = start + CPDStore.levelsPerChapter
+        let start = chapter * ABStore.levelsPerChapter
+        let end = start + ABStore.levelsPerChapter
         guard start >= 0 && end <= progress.count else { return 0 }
         return progress[start..<end].reduce(0) { $0 + $1.stars }
     }
@@ -128,7 +128,7 @@ final class CPDStore: ObservableObject {
     func recordResult(index: Int, moves: Int, par: Int) {
         guard index >= 0 && index < progress.count else { return }
         var p = progress[index]
-        let earned = CPDStore.starCount(moves: moves, par: par)
+        let earned = ABStore.starCount(moves: moves, par: par)
         p.solved = true
         if p.bestMoves == 0 || moves < p.bestMoves {
             p.bestMoves = moves
@@ -146,25 +146,25 @@ final class CPDStore: ObservableObject {
     }
 
     func resetProgress() {
-        progress = Array(repeating: CPDLevelProgress(), count: CPDStore.totalLevels)
+        progress = Array(repeating: ABLevelProgress(), count: ABStore.totalLevels)
         saveProgress()
     }
 }
 
 // MARK: - Haptics / sound feedback (lightweight, respects settings)
 
-enum CPDFeedback {
-    static func tap(_ store: CPDStore) {
+enum ABFeedback {
+    static func tap(_ store: ABStore) {
         guard store.settings.hapticsOn else { return }
         let gen = UIImpactFeedbackGenerator(style: .light)
         gen.impactOccurred()
     }
-    static func push(_ store: CPDStore) {
+    static func push(_ store: ABStore) {
         guard store.settings.hapticsOn else { return }
         let gen = UIImpactFeedbackGenerator(style: .rigid)
         gen.impactOccurred()
     }
-    static func success(_ store: CPDStore) {
+    static func success(_ store: ABStore) {
         guard store.settings.hapticsOn else { return }
         let gen = UINotificationFeedbackGenerator()
         gen.notificationOccurred(.success)
