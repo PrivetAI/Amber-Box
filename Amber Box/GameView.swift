@@ -122,31 +122,47 @@ struct GameView: View {
     // MARK: - Layout
 
     private func gameBody(parentSize: CGSize) -> some View {
-        let isLandscape = parentSize.width > parentSize.height
+        // On iPad an iPhone-only app runs in a compatibility window whose GeometryReader can
+        // report a width WIDER than the visible area; a top-leading layout then spills off the
+        // right/bottom edges (the cropped PADS card / Restart button in App Review). Clamp to the
+        // real (emulated) screen size and center — the same cap+center pattern every other screen
+        // already uses. On a real iPhone these mins are no-ops, so behavior there is unchanged.
+        let screen = UIScreen.main.bounds.size
+        let vw = min(parentSize.width, screen.width)
+        let vh = min(parentSize.height, screen.height)
+        let isLandscape = vw > vh
+        // Control sizing scales to the fitted width so the d-pad + Undo/Restart row always fits.
+        // Portrait row = 2 side buttons + 3 d-pad cells (5 units); stays 56 on iPhone, shrinks
+        // only when the fitted width is narrow. Landscape column needs 3 d-pad cells to fit.
+        let unit: CGFloat = isLandscape
+            ? min(56, (min(vw * 0.34, 280) - 28) / 3)
+            : max(40, min(56, (vw - 56) / 5))
         return Group {
             if isLandscape {
                 HStack(spacing: 18) {
                     VStack(spacing: 14) {
                         hudBar
-                        boardArea(parentSize: parentSize, landscape: true)
+                        boardArea(side: boardSide(vw: vw, vh: vh, landscape: true))
                     }
                     .frame(maxWidth: .infinity)
-                    controlsColumn
-                        .frame(width: min(parentSize.width * 0.34, 280))
+                    controlsColumn(unit: unit)
+                        .frame(width: min(vw * 0.34, 280))
                 }
                 .padding(16)
             } else {
                 VStack(spacing: 16) {
                     hudBar
-                    boardArea(parentSize: parentSize, landscape: false)
+                    boardArea(side: boardSide(vw: vw, vh: vh, landscape: false))
                     Spacer(minLength: 4)
-                    controlsRow
+                    controlsRow(unit: unit)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
                 .padding(.bottom, 12)
             }
         }
+        .frame(width: vw, height: vh)                       // clamp content to the visible area
+        .frame(maxWidth: .infinity, maxHeight: .infinity)   // center within the (possibly larger) geometry
     }
 
     // MARK: - HUD
@@ -180,30 +196,36 @@ struct GameView: View {
 
     // MARK: - Board
 
-    private func boardArea(parentSize: CGSize, landscape: Bool) -> some View {
-        // reserve a square area for the board sized to available width/height
-        let maxW = landscape ? parentSize.width * 0.60 : parentSize.width - 32
-        let maxH = landscape ? parentSize.height - 80 : parentSize.height * 0.52
-        let side = max(120, min(maxW, maxH))
-        return ABBoardView(game: game, side: side, store: store)
+    /// Square board side fitted to the visible (clamped) width/height — never the raw geometry,
+    /// so the board + controls stay within the visible area on iPad compatibility windows.
+    private func boardSide(vw: CGFloat, vh: CGFloat, landscape: Bool) -> CGFloat {
+        let maxW = landscape ? vw * 0.60 : vw - 32
+        let maxH = landscape ? vh - 80 : vh * 0.52
+        return max(120, min(maxW, maxH))
+    }
+
+    private func boardArea(side: CGFloat) -> some View {
+        ABBoardView(game: game, side: side, store: store)
             .frame(width: side, height: side)
             .frame(maxWidth: .infinity)
     }
 
     // MARK: - Controls (portrait row layout)
 
-    private var controlsRow: some View {
+    private func controlsRow(unit: CGFloat) -> some View {
         HStack(alignment: .center, spacing: 18) {
-            sideButton(icon: AnyView(ABUndoIcon(color: game.canUndo ? ABPalette.textPrimary : ABPalette.textMuted, size: 26)),
+            sideButton(icon: AnyView(ABUndoIcon(color: game.canUndo ? ABPalette.textPrimary : ABPalette.textMuted, size: unit * 0.46)),
                        label: "Undo",
+                       diameter: unit,
                        enabled: game.canUndo) {
                 game.undo(store: store)
             }
-            Spacer()
-            dpad
-            Spacer()
-            sideButton(icon: AnyView(ABRestartIcon(color: ABPalette.textPrimary, size: 26)),
+            Spacer(minLength: 0)
+            dpad(unit: unit)
+            Spacer(minLength: 0)
+            sideButton(icon: AnyView(ABRestartIcon(color: ABPalette.textPrimary, size: unit * 0.46)),
                        label: "Restart",
+                       diameter: unit,
                        enabled: true) {
                 game.restart(store: store)
             }
@@ -213,17 +235,19 @@ struct GameView: View {
 
     // MARK: - Controls (landscape column layout)
 
-    private var controlsColumn: some View {
+    private func controlsColumn(unit: CGFloat) -> some View {
         VStack(spacing: 18) {
-            dpad
+            dpad(unit: unit)
             HStack(spacing: 14) {
-                sideButton(icon: AnyView(ABUndoIcon(color: game.canUndo ? ABPalette.textPrimary : ABPalette.textMuted, size: 24)),
+                sideButton(icon: AnyView(ABUndoIcon(color: game.canUndo ? ABPalette.textPrimary : ABPalette.textMuted, size: unit * 0.43)),
                            label: "Undo",
+                           diameter: unit,
                            enabled: game.canUndo) {
                     game.undo(store: store)
                 }
-                sideButton(icon: AnyView(ABRestartIcon(color: ABPalette.textPrimary, size: 24)),
+                sideButton(icon: AnyView(ABRestartIcon(color: ABPalette.textPrimary, size: unit * 0.43)),
                            label: "Restart",
+                           diameter: unit,
                            enabled: true) {
                     game.restart(store: store)
                 }
@@ -231,13 +255,13 @@ struct GameView: View {
         }
     }
 
-    private func sideButton(icon: AnyView, label: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+    private func sideButton(icon: AnyView, label: String, diameter: CGFloat, enabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             VStack(spacing: 5) {
                 ZStack {
                     Circle()
                         .fill(ABPalette.panel)
-                        .frame(width: 56, height: 56)
+                        .frame(width: diameter, height: diameter)
                     icon
                 }
                 Text(label)
@@ -251,36 +275,36 @@ struct GameView: View {
 
     // MARK: - D-pad
 
-    private var dpad: some View {
+    private func dpad(unit: CGFloat) -> some View {
         VStack(spacing: 6) {
-            arrowButton(.up)
+            arrowButton(.up, unit: unit)
             HStack(spacing: 6) {
-                arrowButton(.left)
+                arrowButton(.left, unit: unit)
                 ZStack {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(ABPalette.panel.opacity(0.5))
-                        .frame(width: 56, height: 56)
+                        .frame(width: unit, height: unit)
                     Circle()
                         .fill(ABPalette.panelRaised)
-                        .frame(width: 16, height: 16)
+                        .frame(width: unit * 0.29, height: unit * 0.29)
                 }
-                arrowButton(.right)
+                arrowButton(.right, unit: unit)
             }
-            arrowButton(.down)
+            arrowButton(.down, unit: unit)
         }
     }
 
-    private func arrowButton(_ dir: ABDirection) -> some View {
+    private func arrowButton(_ dir: ABDirection, unit: CGFloat) -> some View {
         Button {
             _ = game.move(dir, store: store)
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(ABPalette.panelRaised)
-                    .frame(width: 56, height: 56)
+                    .frame(width: unit, height: unit)
                 ABArrowShape()
                     .fill(ABPalette.accent)
-                    .frame(width: 30, height: 30)
+                    .frame(width: unit * 0.54, height: unit * 0.54)
                     .rotationEffect(rotation(for: dir))
             }
         }
