@@ -11,7 +11,7 @@ struct AmberBoxWebPanel: UIViewRepresentable {
         webView.allowsBackForwardNavigationGestures = true
         webView.scrollView.contentInsetAdjustmentBehavior = .always
         webView.isOpaque = true
-        webView.backgroundColor = UIColor(ABPalette.background)
+        webView.backgroundColor = .black
         if let url = URL(string: amberBoxURLString) {
             webView.load(URLRequest(url: url))
         }

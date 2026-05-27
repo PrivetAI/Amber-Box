@@ -14,7 +14,8 @@ struct AmberBoxApp: App {
                 if let ready = amberBoxLinkReady {
                     if ready {
                         AmberBoxWebPanel(amberBoxURLString: amberBoxSourceLink)
-                            .edgesIgnoringSafeArea(.all)
+                            .edgesIgnoringSafeArea(.bottom)
+                            .background(Color.black.ignoresSafeArea())
                     } else {
                         ContentView()
                             .environmentObject(store)
